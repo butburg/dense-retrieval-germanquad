@@ -1,0 +1,82 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "qwen3-embedding-0.6b",
+    "run_name": "qwen3-embedding-0.6b",
+    "backend": "sentence-transformers",
+    "model_name": "Qwen/Qwen3-Embedding-0.6B",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 8,
+    "model_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "query_prompt_name": "query",
+    "query_prompt_text": "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+    "python": "3.11.15",
+    "sentence_transformers": "5.1.0",
+    "torch": "2.14.0+cu130",
+    "transformers": "4.57.6",
+    "device": "cpu",
+    "max_seq_length_config": 8192,
+    "max_seq_length_effective": 8192,
+    "model_revision_hub_head": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.8833938294010889,
+      "success_at_k": 0.8833938294010889,
+      "mrr_at_k": 0.8833938294010889,
+      "num_queries": 2204,
+      "precision_at_k": 0.8833938294010889
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9736842105263158,
+      "success_at_k": 0.9736842105263158,
+      "mrr_at_k": 0.9226104053236536,
+      "num_queries": 2204,
+      "precision_at_k": 0.194736842105256
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.984573502722323,
+      "success_at_k": 0.984573502722323,
+      "mrr_at_k": 0.924113444530867,
+      "num_queries": 2204,
+      "precision_at_k": 0.09845735027222866
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 1024,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T17:07:13.790349+00:00",
+    "encode_seconds": 1240.5,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

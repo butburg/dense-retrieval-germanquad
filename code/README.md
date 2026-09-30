@@ -29,13 +29,13 @@ Pilotwerte (BM25 und e5-large, Pilotanalyse in `code/output/analysis/`): Sie die
 
 ## Teil 2: Hauptexperiment (05 und Harness-Skripte)
 
-`05_hauptexperiment_germanquad.ipynb` beschreibt Versuchsaufbau und Forschungsfrage, führt die Läufe optional aus (`RUN_EXPERIMENTS = True`; Standard `False`), lädt die persistierten Ergebnisse, zeigt Tabelle 2 (Qualität), Tabelle 3 (konfirmatorische Tests), Paarvergleiche, Tabelle 4 (512-Sensitivität) und Abbildung 1, prüft die Kennzahlen gegen `comparison_germanquad.json` und listet Umgebung und Modellrevisionen. Ohne `RUN_EXPERIMENTS` läuft es ohne Netz, GPU und API in wenigen Sekunden.
+`05_hauptexperiment_germanquad.ipynb` ist in acht Schritte gegliedert (0 Überblick und Glossar, 1 Daten, 2 Encoding, 3 Ranking und Kennzahlen, 4 Signifikanztests, 5 Sensitivität 512 Tokens, 6 BM25 Standard und BM25-de, 7 Erweiterungsmodelle, 8 Zusammenfassung und Konsistenzprüfung); jeder Schritt beginnt mit „Was? Warum? Wie?“. Die Modelle sind vortrainiert: Das Encoding (474 Passagen und 2.204 Fragen zu Vektoren, Stunden auf CPU) ist der langsame Teil, das Ranking per Kosinus aus dem Cache dauert Sekunden. Zwei Schalter steuern die Neuberechnung: `ENCODE` (Vektoren berechnen, Cache) und `SCORE` (Ranking, Kennzahlen, Tests, BM25, BM25-de, Erweiterung aus dem Cache); beide stehen standardmäßig auf `False`, dann lädt das Notebook nur gespeicherte Ergebnisse (wenige Sekunden, ohne Netz). `ONLY = [...]` beschränkt die Läufe auf einzelne Modellschlüssel; die Dauer jedes gestarteten Schritts steht in `output/harness/run_log.jsonl`, die Encodierzeiten in `encode_germanquad.json` bzw. `metrics_germanquad.json`. Das Notebook liest die normalisierten Dateien in `code/output/germanquad/`; die Notebooks 01 und 02 sind nur nötig, um sie aus den Rohdaten neu zu erzeugen. Es zeigt Tabelle 2 (Qualität), Tabelle 3 (konfirmatorische Tests), Paarvergleiche, Tabelle 4 (512-Sensitivität), Abbildung 1, BM25-de und die Erweiterungsmodelle und prüft die Kennzahlen gegen die drei Vergleichsdateien.
 
-Retriever-Registry (`pylib/embedders.py`): `e5-large` (intfloat/multilingual-e5-large), `bge-m3` (BAAI/bge-m3), `gte-multilingual-base` (Alibaba-NLP/gte-multilingual-base), `jina-v3` (jinaai/jina-embeddings-v3), `openai-3-small` und `openai-3-large` (text-embedding-3-*, Key aus `EMBED_OPENAI_API_KEY`); dazu BM25 (`scripts/run_bm25.py`, Ausgabe `output/bm25_v2/`).
+Retriever-Registry (`pylib/embedders.py`): `e5-large` (intfloat/multilingual-e5-large), `bge-m3` (BAAI/bge-m3), `gte-multilingual-base` (Alibaba-NLP/gte-multilingual-base), `jina-v3` (jinaai/jina-embeddings-v3), `openai-3-small` und `openai-3-large` (text-embedding-3-*, Key aus `EMBED_OPENAI_API_KEY`); dazu BM25 (`scripts/run_bm25.py`, Standard nur GermanQuAD, `--datasets gerlerb_v2` optional, Ausgabe `output/bm25_v2/`) und BM25-de (`bm25_german.py`, Stoppwörter und Snowball-Stemming, Ausgabe `output/bm25_de/`). Erweiterungsmodelle `qwen3-embedding-0.6b`, `arctic-embed-l-v2`, `jina-v2-base-de` laufen mit `--out-dir output/harness/ext`.
 
 Harness-Skripte:
 - `embed_eval.py`: ein Embedder je Aufruf; `--max-seq-length 512` für die Sensitivität (Ausgabe `<model>__len512`).
-- `compare_models.py`: gepaarte Tests (Cluster-Sign-Flip, Cluster-Bootstrap, Holm, exakter McNemar) nach `comparison_germanquad.json`.
+- `compare_models.py`: gepaarte Tests (`paired_test` ist der gemeinsame Testkern von `compare_bm25_de.py` und `compare_extension.py`) (Cluster-Sign-Flip, Cluster-Bootstrap, Holm, exakter McNemar) nach `comparison_germanquad.json`.
 - `make_results.py`: Tabellen und Abbildung 1 nach `output/harness/results/`.
 - `token_lengths.py`: Tokenlängen der Passagen nach `output/harness/token_lengths.json`.
 
@@ -44,11 +44,14 @@ Ausgaben unter `output/harness/`: `<model>/metrics_germanquad.json` und `per_que
 Reproduktion (im Ordner `code/`, Pakete aus `requirements-embed.txt`):
 
 ```
-python embed_eval.py --dataset-dir output/germanquad --model <key>          # je Registry-Schlüssel
+python embed_eval.py --dataset-dir output/germanquad --model <key> --stage encode   # langsam: Vektoren in den Cache
+python embed_eval.py --dataset-dir output/germanquad --model <key> --stage score    # schnell: Ranking und Kennzahlen aus dem Cache (ohne --stage: beides)
 python embed_eval.py --dataset-dir output/germanquad --model <bge-m3|gte-multilingual-base|jina-v3> --max-seq-length 512
 python scripts/run_bm25.py
 python compare_models.py
 python make_results.py
+python bm25_german.py && python compare_bm25_de.py      # BM25-de (explorativ)
+python compare_extension.py                             # nach embed_eval.py ... --out-dir output/harness/ext
 ```
 
 Details zur Validierung: `output/harness/VALIDATION.md`.

@@ -67,6 +67,41 @@ def load_ranks(path: Path, qids: list[str]) -> np.ndarray:
     return np.array([int(float(x)) if x != "" else 0 for x in df[col]], dtype=int)
 
 
+def paired_test(ranks: dict[str, np.ndarray], clusters: list[str], a: str, b: str, metric: str, family: str = "",
+              b_perm: int = B_PERM, b_boot: int = B_BOOT) -> dict:
+    """Paired test of retriever ``b`` against ``a`` on one metric (one result row, no Holm yet).
+
+    Args:
+        ranks: First-relevant ranks per retriever key, aligned to the queries (0 = no relevant doc).
+        clusters: Cluster label (gold passage) per query.
+        a: Reference retriever key.
+        b: Compared retriever key; positive ``diff_b_minus_a`` means ``b`` is better.
+        metric: Key of ``METRICS``.
+        family: Label stored in the row; Holm is applied by the caller per family.
+        b_perm: Sign-flip resamples (Monte-Carlo case).
+        b_boot: Bootstrap resamples for the 95 % CI.
+
+    Returns:
+        Row with means, difference, cluster sign-flip p, n_nonzero, cluster-bootstrap CI and, for
+        Success@k, the descriptive exact McNemar counts. Every call seeds its generators with ``SEED``.
+    """
+    cinv, ncl, sizes = make_clusters(clusters)
+    fa, fb = METRICS[metric](ranks[a]), METRICS[metric](ranks[b])
+    d = fb - fa  # positive = b better
+    sf = cluster_sign_flip(d, cinv, ncl, SEED, b_perm)
+    row = {"family": family, "metric": metric, "a": a, "b": b, "mean_a": float(fa.mean()), "mean_b": float(fb.mean()),
+           "diff_b_minus_a": float(d.mean()), "p_cluster_signflip": sf["p"], "p_method": sf["method"],
+           "n_nonzero_clusters": sf["n_nonzero"], "p_is_upper_bound": sf["mc_floor"],
+           "ci95_cluster_bootstrap": cluster_bootstrap_ci(d, cinv, ncl, sizes, SEED, b_boot),
+           "not_informative": sf["n_nonzero"] < THRESHOLD}
+    if metric.startswith("Success"):
+        mc = mcnemar_exact(fa, fb)
+        row.update(mcnemar_b_a_only=mc["b"], mcnemar_c_b_only=mc["c"], mcnemar_b_plus_c=mc["b_plus_c"],
+                   mcnemar_p=mc["p"], mcnemar_note="exact, optimistic (ignores clusters), descriptive",
+                   not_informative=row["not_informative"] or mc["b_plus_c"] < THRESHOLD)
+    return row
+
+
 def compare(ranks: dict[str, np.ndarray], clusters: list[str], bm25_key: str = "bm25",
             b_perm: int = B_PERM, b_boot: int = B_BOOT) -> dict:
     """Run all comparisons for the retrievers in ``ranks`` (must contain ``bm25_key``).
@@ -74,26 +109,13 @@ def compare(ranks: dict[str, np.ndarray], clusters: list[str], bm25_key: str = "
     Returns:
         Dict with the result rows (``tests``) and family definitions; Holm is applied per family.
     """
-    cinv, ncl, sizes = make_clusters(clusters)
+    _, ncl, _ = make_clusters(clusters)
     n = len(clusters)
     emb = [m for m in EMBEDDERS if m in ranks] + sorted(m for m in ranks if m not in EMBEDDERS and m != bm25_key)
     rows = []
 
     def one(family: str, a: str, b: str, metric: str) -> None:
-        fa, fb = METRICS[metric](ranks[a]), METRICS[metric](ranks[b])
-        d = fb - fa  # positive = b better
-        sf = cluster_sign_flip(d, cinv, ncl, SEED, b_perm)
-        row = {"family": family, "metric": metric, "a": a, "b": b, "mean_a": float(fa.mean()), "mean_b": float(fb.mean()),
-               "diff_b_minus_a": float(d.mean()), "p_cluster_signflip": sf["p"], "p_method": sf["method"],
-               "n_nonzero_clusters": sf["n_nonzero"], "p_is_upper_bound": sf["mc_floor"],
-               "ci95_cluster_bootstrap": cluster_bootstrap_ci(d, cinv, ncl, sizes, SEED, b_boot),
-               "not_informative": sf["n_nonzero"] < THRESHOLD}
-        if metric.startswith("Success"):
-            mc = mcnemar_exact(fa, fb)
-            row.update(mcnemar_b_a_only=mc["b"], mcnemar_c_b_only=mc["c"], mcnemar_b_plus_c=mc["b_plus_c"],
-                       mcnemar_p=mc["p"], mcnemar_note="exact, optimistic (ignores clusters), descriptive",
-                       not_informative=row["not_informative"] or mc["b_plus_c"] < THRESHOLD)
-        rows.append(row)
+        rows.append(paired_test(ranks, clusters, a, b, metric, family, b_perm, b_boot))
 
     for m in emb:
         one("confirmatory: embedder vs BM25, MRR@10", bm25_key, m, "MRR@10")

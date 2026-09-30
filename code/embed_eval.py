@@ -1,8 +1,12 @@
 """Dataset-agnostic dense-retrieval harness (retrieval only, cosine, k=1,5,10).
 
 Usage: python embed_eval.py --dataset-dir output/germanquad --model e5-large [--out-dir output/harness]
+       [--stage {all,encode,score}]
 Input: {docs,queries,qrels}.normalized.jsonl in --dataset-dir.
-Output: <out-dir>/cache/*.npy (embedding cache), <out-dir>/<model>/{metrics.json,per_query.csv}.
+Stages: ``encode`` turns passages and queries into vectors (slow, hours on CPU) and fills the cache; ``score`` reads the
+cached vectors, ranks by cosine and writes the metrics (seconds, needs no model and no network); ``all`` (default) does both.
+Output: <out-dir>/cache/*.npy (embedding cache), <out-dir>/<run>/encode_<ds>.json (provenance and duration of the
+real encoding, written only when something was encoded), <out-dir>/<run>/{metrics_<ds>.json,per_query_<ds>.csv}.
 """
 from __future__ import annotations
 
@@ -46,11 +50,19 @@ def merge_api_meta(metas: list[dict]) -> dict:
             "n_requests": sum(m["n_requests"] for m in metas)}
 
 
-def cached_encode(emb: Embedder, texts: list[str], is_query: bool, cache: Path, tag: str) -> tuple[np.ndarray, bool, dict]:
+def cached_encode(emb: Embedder, texts: list[str], is_query: bool, cache: Path, tag: str,
+                  require_cache: bool = False) -> tuple[np.ndarray, bool, dict]:
     """Encode with .npy cache keyed by model config (incl. max_seq_length) + text hash.
 
-    Returns embeddings, cache-hit flag and the OpenAI request metadata (sidecar ``.meta.json``,
-    empty for local models)."""
+    Args:
+        require_cache: If True, the model is never used; a missing cache file raises instead of encoding.
+
+    Returns:
+        Embeddings, cache-hit flag and the OpenAI request metadata (sidecar ``.meta.json``, empty for local models).
+
+    Raises:
+        FileNotFoundError: If ``require_cache`` is set and no cache file matches model config and texts.
+    """
     h = hashlib.sha256()
     h.update(json.dumps(cache_key_parts(emb.cfg, is_query)).encode())
     for t in texts:
@@ -59,6 +71,8 @@ def cached_encode(emb: Embedder, texts: list[str], is_query: bool, cache: Path, 
     meta_f = f.with_suffix(".meta.json")
     if f.exists():
         return np.load(f), True, json.loads(meta_f.read_text()) if meta_f.exists() else {}
+    if require_cache:
+        raise FileNotFoundError(f"no embedding cache for {emb.cfg.key} ({tag}): {f.name} missing in {cache}; run --stage encode first")
     cache.mkdir(parents=True, exist_ok=True)
     emb.api_meta = {}
     arr = emb.encode(texts, is_query)
@@ -69,6 +83,28 @@ def cached_encode(emb: Embedder, texts: list[str], is_query: bool, cache: Path, 
     return arr, False, meta
 
 
+_NON_INFO = {"dataset", "dataset_dir", "model_key", "run_name", "similarity", "k_values", "relevance_threshold", "doc_text",
+             "openai_api"}
+
+
+def earlier_encode(run_dir: Path, ds: str) -> tuple[dict, dict] | None:
+    """Provenance (model info, environment) of the last real encoding of a run, if recorded.
+
+    Reads ``encode_<ds>.json``; for runs that predate it, falls back to ``metrics_<ds>.json`` provided that file
+    stems from a real encoding (not from a cache read). Returns None if neither exists.
+    """
+    enc, met = run_dir / f"encode_{ds}.json", run_dir / f"metrics_{ds}.json"
+    if enc.exists():
+        d = json.loads(enc.read_text())
+        return d["experiment"], d["environment"]
+    if met.exists():
+        d = json.loads(met.read_text())
+        env = d["environment"]
+        if not (env.get("cache_hit_docs") and env.get("cache_hit_queries")):
+            return {k: v for k, v in d["experiment"].items() if k not in _NON_INFO}, env
+    return None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dataset-dir", required=True, type=Path)
@@ -76,6 +112,8 @@ def main() -> None:
     ap.add_argument("--max-seq-length", type=int, default=None,
                     help="override the model default (sensitivity run); results go to <model>__len<N>")
     ap.add_argument("--out-dir", type=Path, default=CODE / "output" / "harness")
+    ap.add_argument("--stage", choices=("all", "encode", "score"), default="all",
+                    help="encode: vectors into the cache only; score: rank and metrics from the cache only; all: both")
     a = ap.parse_args()
     ds = a.dataset_dir.resolve().name
     queries, docs, qrels = (load_jsonl(a.dataset_dir / f"{n}.normalized.jsonl") for n in ("queries", "docs", "qrels"))
@@ -92,10 +130,32 @@ def main() -> None:
     run_name = f"{a.model}__len{a.max_seq_length}" if a.max_seq_length is not None else a.model
     emb = Embedder(cfg)
     cache = a.out_dir / "cache"
+    out = a.out_dir / run_name
+    cache_only = a.stage == "score"  # score: cache only, the model is never loaded
     t0 = time.time()
-    d_emb, d_hit, d_meta = cached_encode(emb, [doc_text(docs_by_id[i]) for i in doc_ids], False, cache, f"{ds}_docs")
-    q_emb, q_hit, q_meta = cached_encode(emb, [str(q["query_text"]).strip() for q in queries], True, cache, f"{ds}_queries")
+    d_emb, d_hit, d_meta = cached_encode(emb, [doc_text(docs_by_id[i]) for i in doc_ids], False, cache, f"{ds}_docs", cache_only)
+    q_emb, q_hit, q_meta = cached_encode(emb, [str(q["query_text"]).strip() for q in queries], True, cache, f"{ds}_queries", cache_only)
     t_enc = time.time() - t0
+    prev = earlier_encode(out, ds)
+    out.mkdir(parents=True, exist_ok=True)
+    if d_hit and q_hit and prev:  # no model loaded in this run: keep provenance and duration of the real encoding
+        info, enc_env = prev[0], {"encode_seconds": prev[1]["encode_seconds"], "encode_source": "earlier encoding (encode_*.json)"}
+    else:
+        info = {k: v for k, v in emb.info().items() if k not in _NON_INFO}
+        enc_env = {"encode_seconds": round(t_enc, 1), "encode_source": "measured in this run"}
+    env = {"python": platform.python_version(), "platform": platform.platform(), "numpy": np.__version__,
+           "cpu_count": __import__("os").cpu_count(), "timestamp_utc": datetime.now(timezone.utc).isoformat()}
+    enc_file = out / f"encode_{ds}.json"
+    if not (d_hit and q_hit):  # something was really encoded: persist its provenance and duration
+        enc_file.write_text(json.dumps({"experiment": info, "environment": {
+            **env, "encode_seconds": round(t_enc, 1), "cache_hit_docs": d_hit, "cache_hit_queries": q_hit}}, indent=2), encoding="utf-8")
+    elif prev and not enc_file.exists():  # older run without encode record: keep its provenance before metrics are rewritten
+        enc_file.write_text(json.dumps({"experiment": prev[0], "environment": {
+            **prev[1], "note": "seeded from metrics_*.json of the original encoding"}}, indent=2), encoding="utf-8")
+    if a.stage == "encode":
+        print(f"encoded {run_name}: encode_seconds={t_enc:.1f} cache_hit_docs={d_hit} cache_hit_queries={q_hit}")
+        return
+    t1 = time.time()
     idx = rank_cosine(q_emb, d_emb, max(K_VALUES))
     ranked = [[doc_ids[int(i)] for i in row] for row in idx]
     metrics = compute_metrics(qids, ranked, gold, ds)
@@ -109,23 +169,20 @@ def main() -> None:
         rank = int((sims[qi] > sims[qi][gs].max()).sum()) + 1 if gs else ""
         per_q.append((qid, rank, len(gs)))
 
-    out = a.out_dir / run_name
-    out.mkdir(parents=True, exist_ok=True)
+    score_seconds = round(time.time() - t1, 2)
     with (out / f"per_query_{ds}.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f); w.writerow(["query_id", "rank_first_relevant", "num_relevant"]); w.writerows(per_q)
     payload = {"experiment": {"dataset": ds, "dataset_dir": str(a.dataset_dir), "model_key": a.model, "run_name": run_name,
-                              **emb.info(),
+                              **info,
                               **({"openai_api": merge_api_meta([d_meta, q_meta])} if cfg.backend == "openai" else {}), "similarity": "cosine (dot of L2-normalised embeddings)",
                               "k_values": list(K_VALUES), "relevance_threshold": THR,
                               "doc_text": "title\\ntext if both, else either"},
                "metrics": metrics,
                "overview": {"queries": len(queries), "docs": len(docs), "qrels": len(qrels), "embedding_dim": int(d_emb.shape[1]),
                             "queries_without_relevant_docs": sum(q not in gold for q in qids)},
-               "environment": {"python": platform.python_version(), "platform": platform.platform(),
-                               "numpy": np.__version__, "cpu_count": __import__("os").cpu_count(), "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                               "encode_seconds": round(t_enc, 1), "cache_hit_docs": d_hit, "cache_hit_queries": q_hit}}
+               "environment": {**env, **enc_env, "score_seconds": score_seconds, "cache_hit_docs": d_hit, "cache_hit_queries": q_hit}}
     (out / f"metrics_{ds}.json").write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
-    print(json.dumps(metrics, indent=1), f"encode_seconds={t_enc:.1f}")
+    print(json.dumps(metrics, indent=1), f"encode_seconds={enc_env['encode_seconds']} score_seconds={score_seconds}")
 
 
 if __name__ == "__main__":

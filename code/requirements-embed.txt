@@ -16,3 +16,5 @@ datasets==4.5.0
 openai==3.22.1
 rank-bm25==0.2.2
 pytest==9.1.1
+stopwordsiso==0.7.1
+snowballstemmer==3.1.1

@@ -57,3 +57,40 @@ def test_cli_override_suffix_and_cache(tmp_path, monkeypatch):
     assert (out / "bge-m3" / "metrics_toy.json").exists() and (out / "bge-m3__len512" / "metrics_toy.json").exists()
     assert FakeEmb.made[0].max_seq_length is None and FakeEmb.made[1].max_seq_length == 512
     assert len(list((out / "cache").glob("*.npy"))) == 4  # docs+queries per setting, no key collision
+
+
+def _toy(tmp_path):
+    ds = tmp_path / "toy"; ds.mkdir()
+    (ds / "docs.normalized.jsonl").write_text("\n".join(json.dumps({"doc_id": f"d{i}", "text": f"t{i}"}) for i in range(12)))
+    (ds / "queries.normalized.jsonl").write_text("\n".join(json.dumps({"query_id": f"q{i}", "query_text": "x"}) for i in range(2)))
+    (ds / "qrels.normalized.jsonl").write_text("\n".join(json.dumps({"query_id": f"q{i}", "doc_id": f"d{i}", "relevance": 1}) for i in range(2)))
+    return ds
+
+
+def test_stages_encode_then_score_without_model(tmp_path, monkeypatch):
+    ds, out = _toy(tmp_path), tmp_path / "out"
+    argv = ["embed_eval.py", "--dataset-dir", str(ds), "--model", "bge-m3", "--out-dir", str(out)]
+    monkeypatch.setattr(embed_eval, "Embedder", FakeEmb)
+    monkeypatch.setattr(sys, "argv", argv + ["--stage", "score"])
+    try:
+        embed_eval.main()
+        raise AssertionError("score without cache must fail")
+    except FileNotFoundError as ex:
+        assert "--stage encode" in str(ex)
+    monkeypatch.setattr(sys, "argv", argv + ["--stage", "encode"])
+    embed_eval.main()
+    enc = json.loads((out / "bge-m3" / "encode_toy.json").read_text())
+    assert not (out / "bge-m3" / "metrics_toy.json").exists() and enc["environment"]["encode_seconds"] >= 0
+
+    class NoEncode(FakeEmb):
+        def encode(self, texts, is_query):
+            raise AssertionError("the score stage must not encode")
+
+    enc["environment"]["encode_seconds"] = 123.4  # duration of the real encoding survives a cache-only score run
+    (out / "bge-m3" / "encode_toy.json").write_text(json.dumps(enc))
+    monkeypatch.setattr(embed_eval, "Embedder", NoEncode)
+    monkeypatch.setattr(sys, "argv", argv + ["--stage", "score"])
+    embed_eval.main()
+    m = json.loads((out / "bge-m3" / "metrics_toy.json").read_text())
+    assert m["environment"]["encode_seconds"] == 123.4 and m["environment"]["cache_hit_docs"] is True
+    assert "score_seconds" in m["environment"] and (out / "bge-m3" / "per_query_toy.csv").exists()
