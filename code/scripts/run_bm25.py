@@ -1,12 +1,13 @@
 """BM25 baseline (same logic as code/03_bm25_retrieval_poc.ipynb) on normalized datasets.
 
-Usage: python code/scripts/run_bm25.py
-Inputs: code/output/germanquad/, code/output/gerlerb_v2/ (normalized jsonl)
-Outputs: code/output/bm25_v2/{bm25_results.csv,bm25_results.json,per_query_ranks.csv}
+Usage: python code/scripts/run_bm25.py [--datasets germanquad [gerlerb_v2]] [--out-dir code/output/bm25_v2]
+Inputs: code/output/germanquad/ (default); code/output/gerlerb_v2/ only when requested with --datasets (normalized jsonl)
+Outputs: <out-dir>/{bm25_results.csv,bm25_results.json,per_query_ranks.csv} with one block of rows per selected
+dataset (a run without gerlerb_v2 therefore writes no GerLeRB rows).
 per_query_ranks.csv holds the full-ranking rank of the best-ranked gold doc per query
 (for bootstrap); first_rel_rank is the notebook definition (top-10 only, else empty).
 """
-import json, platform, re, sys
+import argparse, json, platform, re, sys
 from datetime import datetime, timezone
 from importlib.metadata import version as package_version
 from pathlib import Path
@@ -79,26 +80,32 @@ def evaluate(name, paths):
     return metrics, overview, rows
 
 
-def main():
-    OUT.mkdir(parents=True, exist_ok=True)
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--datasets", nargs="+", choices=sorted(DATASETS), default=["germanquad"],
+                    help="normalized datasets to rank (default: germanquad only)")
+    ap.add_argument("--out-dir", type=Path, default=OUT)
+    a = ap.parse_args(argv)
+    out, selected = a.out_dir, {n: DATASETS[n] for n in a.datasets}
+    out.mkdir(parents=True, exist_ok=True)
     all_metrics, overviews, all_rows = [], [], []
-    for name, paths in DATASETS.items():
+    for name, paths in selected.items():
         m, o, r = evaluate(name, paths)
         all_metrics += m; overviews.append(o); all_rows += r
         print(name, o)
     mdf = pd.DataFrame(all_metrics).sort_values(["dataset", "k"]).reset_index(drop=True)
-    mdf.to_csv(OUT / "bm25_results.csv", index=False, encoding="utf-8")
+    mdf.to_csv(out / "bm25_results.csv", index=False, encoding="utf-8")
     pq = pd.DataFrame(all_rows)
     pq["gold_doc_ids"] = pq["gold_doc_ids"].map(" | ".join)
     pq["top_doc_ids"] = pq["top_doc_ids"].map(" | ".join)
-    pq.drop(columns="has_qrels").to_csv(OUT / "per_query_ranks.csv", index=False, encoding="utf-8")
+    pq.drop(columns="has_qrels").to_csv(out / "per_query_ranks.csv", index=False, encoding="utf-8")
     payload = {
         "run_timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "experiment": {
             "retriever": "BM25Okapi", "python_version": platform.python_version(),
             "package": "rank_bm25", "package_version": package_version("rank-bm25"),
             "pandas_version": package_version("pandas"),
-            "datasets": {n: {r: str(p.relative_to(CODE)) for r, p in ps.items()} for n, ps in DATASETS.items()},
+            "datasets": {n: {r: str(p.relative_to(CODE)) for r, p in ps.items()} for n, ps in selected.items()},
             "split": "normalized:local", "preprocessing": "regex-tokenization + lowercase",
             "tokenizer_regex": TOKEN_PATTERN.pattern,
             "bm25_params": {"k1": BM25_K1, "b": BM25_B, "epsilon": BM25_EPSILON},
@@ -107,7 +114,7 @@ def main():
         },
         "overview": overviews, "metrics": all_metrics,
     }
-    (OUT / "bm25_results.json").write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+    (out / "bm25_results.json").write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
     print(mdf.to_string())
 
 

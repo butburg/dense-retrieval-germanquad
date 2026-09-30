@@ -28,7 +28,7 @@ Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face
 
 ## Reproduktion über Notebook 05
 
-`code/05_hauptexperiment_germanquad.ipynb` beschreibt den Versuchsaufbau, lädt die persistierten Ergebnisse aus `code/output/harness/`, zeigt Tabelle 2 (Retrieval-Metriken), Tabelle 3 (konfirmatorische Tests gegen BM25), Paarvergleiche, Tabelle 4 (Sensitivität bei 512 Token) und Abbildung 1 und prüft die Kennzahlen gegen `comparison_germanquad.json`. Mit `RUN_EXPERIMENTS = False` (Standard) läuft es in wenigen Sekunden ohne Netz, GPU und API. Mit `RUN_EXPERIMENTS = True` führt es die Embedding-Läufe neu aus (CPU, mehrere Stunden; OpenAI-Läufe benötigen den API-Schlüssel).
+`code/05_hauptexperiment_germanquad.ipynb` beschreibt den Versuchsaufbau, lädt die persistierten Ergebnisse aus `code/output/harness/`, zeigt Tabelle 2 (Retrieval-Metriken), Tabelle 3 (konfirmatorische Tests gegen BM25), Paarvergleiche, Tabelle 4 (Sensitivität bei 512 Token) und Abbildung 1 und prüft die Kennzahlen gegen `comparison_germanquad.json`. Mit `ENCODE = SCORE = False` (Standard) läuft es in wenigen Sekunden ohne Netz, GPU und API. `ENCODE = True` berechnet die Vektoren neu (CPU, mehrere Stunden; OpenAI-Läufe benötigen den API-Schlüssel), `SCORE = True` rechnet Ranking und Tests aus dem Cache.
 
 Die Läufe lassen sich auch einzeln über die Skripte starten (im Ordner `code/`):
 
