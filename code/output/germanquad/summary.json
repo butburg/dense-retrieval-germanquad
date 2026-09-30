@@ -1,0 +1,24 @@
+{
+  "dataset": "germanquad",
+  "raw_line_counts": {
+    "queries_lines": 2204,
+    "docs_lines": 474,
+    "qrels_lines": 2204
+  },
+  "normalized_counts": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204
+  },
+  "id_consistency": {
+    "query_count": 2204,
+    "doc_count": 474,
+    "qrel_count": 2204,
+    "qrels_query_id_unique": 2204,
+    "qrels_doc_id_unique": 474,
+    "missing_query_ids_in_queries_count": 0,
+    "missing_doc_ids_in_docs_count": 0,
+    "missing_query_ids_in_queries_sample": [],
+    "missing_doc_ids_in_docs_sample": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "bge-m3",
+    "run_name": "bge-m3",
+    "backend": "sentence-transformers",
+    "model_name": "BAAI/bge-m3",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 16,
+    "model_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 8192,
+    "model_revision_hub_head": "5617a9f61b028005a4858fdac845db406aefb181",
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.9169691470054446,
+      "success_at_k": 0.9169691470054446,
+      "mrr_at_k": 0.9169691470054446,
+      "num_queries": 2204,
+      "precision_at_k": 0.9169691470054446
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9804900181488203,
+      "success_at_k": 0.9804900181488203,
+      "mrr_at_k": 0.944426799758016,
+      "num_queries": 2204,
+      "precision_at_k": 0.19609800362975682
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9886569872958257,
+      "success_at_k": 0.9886569872958257,
+      "mrr_at_k": 0.9455519185895774,
+      "num_queries": 2204,
+      "precision_at_k": 0.0988656987295789
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 1024,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T04:22:10.008572+00:00",
+    "encode_seconds": 766.2,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

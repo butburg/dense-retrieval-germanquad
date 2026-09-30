@@ -1,0 +1,80 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "e5-large",
+    "run_name": "e5-large",
+    "backend": "sentence-transformers",
+    "model_name": "intfloat/multilingual-e5-large",
+    "query_prefix": "query: ",
+    "doc_prefix": "passage: ",
+    "normalize": true,
+    "batch_size": 32,
+    "model_revision": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 512,
+    "model_revision_hub_head": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.8983666061705989,
+      "success_at_k": 0.8983666061705989,
+      "mrr_at_k": 0.8983666061705989,
+      "num_queries": 2204,
+      "precision_at_k": 0.8983666061705989
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9791288566243194,
+      "success_at_k": 0.9791288566243194,
+      "mrr_at_k": 0.9322141560798548,
+      "num_queries": 2204,
+      "precision_at_k": 0.19582577132485665
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9868421052631579,
+      "success_at_k": 0.9868421052631579,
+      "mrr_at_k": 0.9332537521965834,
+      "num_queries": 2204,
+      "precision_at_k": 0.09868421052631213
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 1024,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T05:35:46.277207+00:00",
+    "encode_seconds": 464.6,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "openai-3-large",
+    "run_name": "openai-3-large",
+    "backend": "openai",
+    "model_name": "text-embedding-3-large",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 128,
+    "python": "3.11.15",
+    "openai": "3.22.1",
+    "openai_api": {
+      "requested_model": "text-embedding-3-large",
+      "returned_models": [
+        "text-embedding-3-large"
+      ],
+      "first_request_utc": "2026-09-30T04:04:28.183532+00:00",
+      "last_request_utc": "2026-09-30T04:04:52.049778+00:00",
+      "n_requests": 22
+    },
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.9083484573502723,
+      "success_at_k": 0.9083484573502723,
+      "mrr_at_k": 0.9083484573502723,
+      "num_queries": 2204,
+      "precision_at_k": 0.9083484573502723
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9895644283121597,
+      "success_at_k": 0.9895644283121597,
+      "mrr_at_k": 0.9436781609195405,
+      "num_queries": 2204,
+      "precision_at_k": 0.1979128856624246
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9936479128856625,
+      "success_at_k": 0.9936479128856625,
+      "mrr_at_k": 0.9443020266182701,
+      "num_queries": 2204,
+      "precision_at_k": 0.09936479128856254
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 3072,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T04:04:52.935967+00:00",
+    "encode_seconds": 25.1,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

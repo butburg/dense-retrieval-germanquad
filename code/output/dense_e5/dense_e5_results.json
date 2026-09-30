@@ -1,0 +1,117 @@
+{
+  "run_timestamp_utc": "2026-08-14T14:30:08.206608+00:00",
+  "experiment": {
+    "retriever": "dense-embedding",
+    "model_name": "intfloat/multilingual-e5-large",
+    "python_version": "3.9.6",
+    "package": "sentence-transformers",
+    "package_version": "5.1.0",
+    "dataset_name": "germanquad",
+    "split": "normalized:local",
+    "corpus": "normalized docs.normalized.jsonl",
+    "document_representation": "text only",
+    "query_prefix": "query: ",
+    "document_prefix": "passage: ",
+    "chunking": "disabled; qrels are document-based",
+    "similarity_metric": "cosine similarity via normalized embedding dot product",
+    "batch_size": 32,
+    "normalize_embeddings": true,
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "metrics": [
+      "Recall@k",
+      "Success@k",
+      "MRR@k",
+      "Precision@k"
+    ]
+  },
+  "overview": [
+    {
+      "dataset": "germanquad",
+      "split": "local",
+      "queries": 2204,
+      "docs": 474,
+      "qrels": 2204,
+      "queries_without_qrels": 0,
+      "queries_without_relevant_docs": 0
+    }
+  ],
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "model": "intfloat/multilingual-e5-large",
+      "k": 1,
+      "recall_at_k": 0.8983666061705989,
+      "success_at_k": 0.8983666061705989,
+      "mrr_at_k": 0.8983666061705989,
+      "precision_at_k": 0.8983666061705989,
+      "num_queries": 2204
+    },
+    {
+      "dataset": "germanquad",
+      "model": "intfloat/multilingual-e5-large",
+      "k": 5,
+      "recall_at_k": 0.9791288566243194,
+      "success_at_k": 0.9791288566243194,
+      "mrr_at_k": 0.9322141560798548,
+      "precision_at_k": 0.19582577132485665,
+      "num_queries": 2204
+    },
+    {
+      "dataset": "germanquad",
+      "model": "intfloat/multilingual-e5-large",
+      "k": 10,
+      "recall_at_k": 0.9868421052631579,
+      "success_at_k": 0.9868421052631579,
+      "mrr_at_k": 0.9332537521965834,
+      "precision_at_k": 0.09868421052631213,
+      "num_queries": 2204
+    }
+  ],
+  "sample_rankings": [
+    {
+      "dataset": "germanquad",
+      "query_id": "q40369",
+      "query_text": "Was kann den Verschlei\u00df des seillosen Aufzuges minimieren?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c36812 | c38251 | c41152 | c37727 | c41186 | c41391 | c36638 | c41225 | c40427",
+      "top_doc_scores": "0.8335 | 0.7969 | 0.7893 | 0.7860 | 0.7808 | 0.7805 | 0.7804 | 0.7791 | 0.7777 | 0.7733"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40370",
+      "query_text": "In welcher deutschen Stadt wird der seillose Aufzug getestet?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c38251 | c41474 | c36812 | c36602 | c38156 | c41152 | c36572 | c37322 | c36428",
+      "top_doc_scores": "0.8722 | 0.7824 | 0.7792 | 0.7771 | 0.7695 | 0.7600 | 0.7594 | 0.7554 | 0.7546 | 0.7527"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40366",
+      "query_text": "Wo wurde ein seilloser Aufzug entwickelt?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c37731 | c38251 | c36419 | c41474 | c36602 | c36572 | c41152 | c36848 | c41404",
+      "top_doc_scores": "0.8613 | 0.7806 | 0.7730 | 0.7674 | 0.7671 | 0.7664 | 0.7647 | 0.7646 | 0.7643 | 0.7633"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40367",
+      "query_text": "Wie funktioniert ein seilloser Aufzug?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c38251 | c37727 | c41391 | c36812 | c41152 | c41225 | c36767 | c37644 | c38268",
+      "top_doc_scores": "0.8644 | 0.8164 | 0.8042 | 0.7849 | 0.7816 | 0.7804 | 0.7713 | 0.7659 | 0.7637 | 0.7627"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40368",
+      "query_text": "Wann muss man die Zieletage in seillosen Aufz\u00fcgen ausw\u00e4hlen? ",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c37727 | c38601 | c38251 | c41322 | c37335 | c41225 | c37520 | c41465 | c37756",
+      "top_doc_scores": "0.8096 | 0.7937 | 0.7835 | 0.7833 | 0.7769 | 0.7685 | 0.7666 | 0.7654 | 0.7642 | 0.7633"
+    }
+  ]
+}

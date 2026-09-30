@@ -1,0 +1,83 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "jina-v3",
+    "run_name": "jina-v3__len512",
+    "backend": "sentence-transformers",
+    "model_name": "jinaai/jina-embeddings-v3",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 4,
+    "model_revision": "ab036b023d30b4d1138c4c3bfa9f0c445ab455d6",
+    "trust_remote_code": true,
+    "query_task": "retrieval.query",
+    "doc_task": "retrieval.passage",
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": 512,
+    "max_seq_length_effective": 512,
+    "code_repo": "jinaai/xlm-roberta-flash-implementation",
+    "code_revision_pinned": "bd55a5ec8e6c0fb1d6c26efb4b6a4a74ce8a88d3",
+    "code_revision_loaded": "bd55a5ec8e6c0fb1d6c26efb4b6a4a74ce8a88d3",
+    "model_revision_hub_head": "ab036b023d30b4d1138c4c3bfa9f0c445ab455d6",
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.8915607985480943,
+      "success_at_k": 0.8915607985480943,
+      "mrr_at_k": 0.8915607985480943,
+      "num_queries": 2204,
+      "precision_at_k": 0.8915607985480943
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9786751361161524,
+      "success_at_k": 0.9786751361161524,
+      "mrr_at_k": 0.9293405928614639,
+      "num_queries": 2204,
+      "precision_at_k": 0.19573502722322325
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9868421052631579,
+      "success_at_k": 0.9868421052631579,
+      "mrr_at_k": 0.9303506611355975,
+      "num_queries": 2204,
+      "precision_at_k": 0.09868421052631213
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 1024,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T05:27:58.849616+00:00",
+    "encode_seconds": 1479.1,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

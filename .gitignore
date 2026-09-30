@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Secrets und lokale Konfiguration
+.env
+.env.*
+
+# Eingabedaten und regenerierbare Zwischenstände
+code/input/**
+!code/input/.gitkeep
+code/output/harness/cache/
+code/output/manuscript/build/
+docs/_build/
+
+# Editor/OS
+.DS_Store
+.vscode/
+*.log
+*.tmp
+*~

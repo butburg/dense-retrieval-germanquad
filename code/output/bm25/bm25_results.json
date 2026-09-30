@@ -1,0 +1,186 @@
+{
+  "run_timestamp_utc": "2026-08-14T13:25:36.230468+00:00",
+  "experiment": {
+    "retriever": "BM25Okapi",
+    "python_version": "3.9.6",
+    "package": "rank_bm25",
+    "package_version": "0.2.2",
+    "dataset_names": [
+      "gerlerb",
+      "germanquad"
+    ],
+    "split": "normalized:local",
+    "corpus": "normalized docs.normalized.jsonl",
+    "preprocessing": "regex-tokenization + lowercase",
+    "tokenizer_regex": "[0-9A-Za-z\\u00c4\\u00d6\\u00dc\\u00e4\\u00f6\\u00fc\\u00df]+",
+    "bm25_params": {
+      "k1": 1.5,
+      "b": 0.75,
+      "epsilon": 0.25
+    },
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "seed": "not-applicable (BM25 deterministic without random seed)",
+    "metrics": [
+      "Recall@k",
+      "Success@k",
+      "MRR@k"
+    ]
+  },
+  "overview": [
+    {
+      "dataset": "germanquad",
+      "split": "local",
+      "queries": 2204,
+      "docs": 474,
+      "qrels": 2204,
+      "queries_without_qrels": 0,
+      "queries_without_relevant_docs": 0
+    },
+    {
+      "dataset": "gerlerb",
+      "split": "local",
+      "queries": 367,
+      "docs": 85738,
+      "qrels": 367,
+      "queries_without_qrels": 0,
+      "queries_without_relevant_docs": 0
+    }
+  ],
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.837568058076225,
+      "success_at_k": 0.837568058076225,
+      "mrr_at_k": 0.837568058076225,
+      "num_queries": 2204
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9482758620689655,
+      "success_at_k": 0.9482758620689655,
+      "mrr_at_k": 0.8821158499697518,
+      "num_queries": 2204
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9646098003629764,
+      "success_at_k": 0.9646098003629764,
+      "mrr_at_k": 0.8844038976752223,
+      "num_queries": 2204
+    },
+    {
+      "dataset": "gerlerb",
+      "k": 1,
+      "recall_at_k": 0.21798365122615804,
+      "success_at_k": 0.21798365122615804,
+      "mrr_at_k": 0.21798365122615804,
+      "num_queries": 367
+    },
+    {
+      "dataset": "gerlerb",
+      "k": 5,
+      "recall_at_k": 0.35967302452316074,
+      "success_at_k": 0.35967302452316074,
+      "mrr_at_k": 0.27202543142597635,
+      "num_queries": 367
+    },
+    {
+      "dataset": "gerlerb",
+      "k": 10,
+      "recall_at_k": 0.4114441416893733,
+      "success_at_k": 0.4114441416893733,
+      "mrr_at_k": 0.2792180269019507,
+      "num_queries": 367
+    }
+  ],
+  "sample_rankings": [
+    {
+      "dataset": "germanquad",
+      "query_id": "q40369",
+      "query_text": "Was kann den Verschlei\u00df des seillosen Aufzuges minimieren?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c40389 | c38273 | c36674 | c38297 | c41062 | c37475 | c41277 | c41153 | c38332",
+      "top_doc_scores": "27.2030 | 11.1640 | 8.7295 | 8.6020 | 8.5640 | 8.2233 | 8.0593 | 8.0233 | 7.9658 | 7.9412"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40370",
+      "query_text": "In welcher deutschen Stadt wird der seillose Aufzug getestet?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c40436 | c42112 | c36764 | c41536 | c38590 | c41142 | c38320 | c36774 | c41033",
+      "top_doc_scores": "28.5611 | 14.3085 | 13.7561 | 13.0344 | 11.8988 | 11.4067 | 10.9721 | 10.7456 | 10.6749 | 10.5301"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40366",
+      "query_text": "Wo wurde ein seilloser Aufzug entwickelt?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c37644 | c37018 | c38247 | c37217 | c41119 | c36598 | c41161 | c40511 | c38194",
+      "top_doc_scores": "27.4796 | 7.2742 | 6.0879 | 6.0210 | 5.9655 | 5.9005 | 5.7998 | 5.6947 | 5.5901 | 5.3998"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40367",
+      "query_text": "Wie funktioniert ein seilloser Aufzug?",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c36606 | c37099 | c44122 | c41536 | c36811 | c42127 | c41156 | c45642 | c38816",
+      "top_doc_scores": "22.7762 | 3.3126 | 3.3058 | 3.2266 | 3.2122 | 3.1672 | 3.0305 | 3.0247 | 3.0190 | 2.9074"
+    },
+    {
+      "dataset": "germanquad",
+      "query_id": "q40368",
+      "query_text": "Wann muss man die Zieletage in seillosen Aufz\u00fcgen ausw\u00e4hlen? ",
+      "gold_doc_ids": "c40369",
+      "top_doc_ids": "c40369 | c38189 | c40462 | c41445 | c38077 | c40219 | c37033 | c37277 | c41192 | c36974",
+      "top_doc_scores": "16.0760 | 12.8726 | 12.4375 | 12.2665 | 10.5406 | 10.0996 | 9.8856 | 9.7670 | 9.4769 | 9.4324"
+    },
+    {
+      "dataset": "gerlerb",
+      "query_id": "206",
+      "query_text": "Kann die Ablehnung der Annahme einer Verfassungsbeschwerde ohne Begr\u00fcndung erfolgen?",
+      "gold_doc_ids": "93d_bverfgg",
+      "top_doc_ids": "93d_bverfgg | 93b_bverfgg | 93_bverfgg | 102_btgo_1980 | 93a_bverfgg | 32_bverfgg | 20_lwvfg | 2202_bgb | 145_sgg | 95_bverfgg",
+      "top_doc_scores": "48.3466 | 36.7073 | 32.0422 | 30.5326 | 29.3310 | 29.0855 | 28.6887 | 28.5883 | 28.1260 | 27.8949"
+    },
+    {
+      "dataset": "gerlerb",
+      "query_id": "207",
+      "query_text": "Wann muss der Arbeitgeber den Betriebsrat bei einer neuen Zuordnung von Mitarbeitern zu einer Entgeltgruppe informieren?",
+      "gold_doc_ids": "99_betrvg",
+      "top_doc_ids": "14_entgtranspg | 15_entgtranspg | 85_betrvg | 80_betrvg | 96_betrvg | 43_betrvg | 89_betrvg | 92_betrvg | 12_asig | 90_betrvg",
+      "top_doc_scores": "45.2781 | 42.1811 | 38.0834 | 37.5490 | 36.7376 | 36.6802 | 36.4852 | 36.2770 | 36.2583 | 35.7403"
+    },
+    {
+      "dataset": "gerlerb",
+      "query_id": "209",
+      "query_text": "Unter welchen Bedingungen kann der Zeitraum zur Berechnung des Elterngeldes verl\u00e4ngert werden, wenn es zu einer krankheitsbedingten Arbeitsunf\u00e4higkeit durch Schwangerschaft kommt?",
+      "gold_doc_ids": "2b_beeg",
+      "top_doc_ids": "3_entgfg | 146_sgb_3 | 47_sgb_5 | 24b_sgb_5 | 574a_bgb | 10_gfdv | 26_sgb_10 | 162_kagb | 31_vwvfg | 35_tkg_2021",
+      "top_doc_scores": "38.2758 | 35.8362 | 33.9728 | 33.8792 | 33.2348 | 32.0724 | 32.0300 | 31.9680 | 31.8253 | 31.3894"
+    },
+    {
+      "dataset": "gerlerb",
+      "query_id": "210",
+      "query_text": "Kann man Monate mit schwangerschaftsbedingter Krankheit vom Bemessungszeitraum f\u00fcrs Elterngeld ausnehmen?",
+      "gold_doc_ids": "2b_beeg",
+      "top_doc_ids": "3_beeg | 150_sgb_3 | 21_sgb_6 | 9_endlagervlv | 2c_beeg | 150a_sgb_11 | 4_beeg | 2_beeg | 7_beeg | 4c_beeg",
+      "top_doc_scores": "23.5658 | 20.8847 | 19.1047 | 16.9754 | 16.8101 | 16.7734 | 16.7029 | 16.4356 | 16.2108 | 16.1766"
+    },
+    {
+      "dataset": "gerlerb",
+      "query_id": "211",
+      "query_text": "Bis zu welchem Alter eines Kindes kann ein Elternteil Elternzeit beanspruchen?",
+      "gold_doc_ids": "15_beeg",
+      "top_doc_ids": "16_beeg | 15_beeg | 1_erzurlsoldv | 56_sgb_6 | 4_beeg | 11_bgb | 51_sgb_8 | 1629_bgb | 1680_bgb | 1612a_bgb",
+      "top_doc_scores": "35.0554 | 32.1463 | 29.8943 | 27.9199 | 27.4494 | 27.1267 | 26.8905 | 26.8037 | 26.6826 | 26.4274"
+    }
+  ]
+}

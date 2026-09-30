@@ -1,0 +1,41 @@
+{
+  "dataset": "germanquad",
+  "n_passages": 474,
+  "counted": "add_special_tokens=True, doc prefix prepended, no truncation",
+  "threshold": 512,
+  "models": {
+    "e5-large": {
+      "model_name": "intfloat/multilingual-e5-large",
+      "revision": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+      "n_over_512": 144,
+      "median": 350.5,
+      "max": 2654,
+      "min": 117
+    },
+    "bge-m3": {
+      "model_name": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "n_over_512": 143,
+      "median": 348.5,
+      "max": 2652,
+      "min": 115
+    },
+    "gte-multilingual-base": {
+      "model_name": "Alibaba-NLP/gte-multilingual-base",
+      "revision": "9bbca17d9273fd0d03d5725c7a4b0f6b45142062",
+      "n_over_512": 143,
+      "median": 348.5,
+      "max": 2652,
+      "min": 115
+    },
+    "jina-v3": {
+      "model_name": "jinaai/jina-embeddings-v3",
+      "revision": "ab036b023d30b4d1138c4c3bfa9f0c445ab455d6",
+      "n_over_512": 143,
+      "median": 348.5,
+      "max": 2652,
+      "min": 115
+    }
+  },
+  "transformers": "4.57.3"
+}

@@ -1,0 +1,80 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "arctic-embed-l-v2",
+    "run_name": "arctic-embed-l-v2",
+    "backend": "sentence-transformers",
+    "model_name": "Snowflake/snowflake-arctic-embed-l-v2.0",
+    "query_prefix": "query: ",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 16,
+    "model_revision": "ac6544c8a46e00af67e330e85a9028c66b8cfd9a",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.1.0",
+    "torch": "2.14.0+cu130",
+    "transformers": "4.57.6",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 8192,
+    "model_revision_hub_head": "ac6544c8a46e00af67e330e85a9028c66b8cfd9a",
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.911524500907441,
+      "success_at_k": 0.911524500907441,
+      "mrr_at_k": 0.911524500907441,
+      "num_queries": 2204,
+      "precision_at_k": 0.911524500907441
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9813974591651543,
+      "success_at_k": 0.9813974591651543,
+      "mrr_at_k": 0.9423018753781003,
+      "num_queries": 2204,
+      "precision_at_k": 0.1962794918330236
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9909255898366606,
+      "success_at_k": 0.9909255898366606,
+      "mrr_at_k": 0.9436864431192924,
+      "num_queries": 2204,
+      "precision_at_k": 0.09909255898366237
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 1024,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T16:39:43.394009+00:00",
+    "encode_seconds": 613.0,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "raw_line_counts": {
+    "germanquad": {
+      "queries_lines": 2204,
+      "docs_lines": 474,
+      "qrels_lines": 2204
+    },
+    "gerlerb": {
+      "topics_lines": 368,
+      "qrels_lines": 368,
+      "corpus_trec_lines": 1292523
+    }
+  },
+  "parser_differences": {
+    "gerlerb_trec": {
+      "line_count": 1292523,
+      "doc_open_tags": 86755,
+      "doc_close_tags": 86755,
+      "docno_tags": 90917,
+      "text_open_tags": 90917,
+      "text_close_tags": 90917,
+      "parsed_docs": 86755,
+      "docs_missing_docno": 0,
+      "docs_missing_text": 57,
+      "parser_diff_doc_open_minus_parsed": 0,
+      "parser_diff_docno_minus_parsed": 4162,
+      "parser_diff_text_open_minus_text_close": 0
+    }
+  },
+  "normalized_counts": {
+    "germanquad": {
+      "queries": 2204,
+      "docs": 474,
+      "qrels": 2204
+    },
+    "gerlerb": {
+      "queries": 367,
+      "docs": 85738,
+      "qrels": 367
+    }
+  },
+  "id_consistency": {
+    "germanquad": {
+      "query_count": 2204,
+      "doc_count": 474,
+      "qrel_count": 2204,
+      "qrels_query_id_unique": 2204,
+      "qrels_doc_id_unique": 474,
+      "missing_query_ids_in_queries_count": 0,
+      "missing_doc_ids_in_docs_count": 0,
+      "missing_query_ids_in_queries_sample": [],
+      "missing_doc_ids_in_docs_sample": []
+    },
+    "gerlerb": {
+      "query_count": 367,
+      "doc_count": 85738,
+      "qrel_count": 367,
+      "qrels_query_id_unique": 367,
+      "qrels_doc_id_unique": 269,
+      "missing_query_ids_in_queries_count": 0,
+      "missing_doc_ids_in_docs_count": 0,
+      "missing_query_ids_in_queries_sample": [],
+      "missing_doc_ids_in_docs_sample": []
+    }
+  }
+}

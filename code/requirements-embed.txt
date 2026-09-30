@@ -1,0 +1,18 @@
+# Unified stack for all main runs (Python 3.11.14, CPU). Install: pip install -r requirements-embed.txt
+# torch CPU wheel: pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0
+ipykernel==6.31.0
+transformers==4.57.3
+sentence-transformers==5.7.0
+tokenizers==0.22.2
+huggingface-hub==0.36.2
+safetensors==0.8.0
+einops==0.8.2
+numpy==2.4.6
+scipy==1.17.1
+pandas==2.3.3
+matplotlib==3.11.2
+datasets==4.5.0
+openai==3.22.1
+rank-bm25==0.2.2
+pytest==9.1.1

@@ -1,0 +1,83 @@
+{
+  "experiment": {
+    "dataset": "germanquad",
+    "dataset_dir": "output/germanquad",
+    "model_key": "gte-multilingual-base",
+    "run_name": "gte-multilingual-base",
+    "backend": "sentence-transformers",
+    "model_name": "Alibaba-NLP/gte-multilingual-base",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 16,
+    "model_revision": "9bbca17d9273fd0d03d5725c7a4b0f6b45142062",
+    "trust_remote_code": true,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 8192,
+    "code_repo": "Alibaba-NLP/new-impl",
+    "code_revision_pinned": "40ced75c3017eb27626c9d4ea981bde21a2662f4",
+    "code_revision_loaded": "40ced75c3017eb27626c9d4ea981bde21a2662f4",
+    "model_revision_hub_head": "9bbca17d9273fd0d03d5725c7a4b0f6b45142062",
+    "similarity": "cosine (dot of L2-normalised embeddings)",
+    "k_values": [
+      1,
+      5,
+      10
+    ],
+    "relevance_threshold": 1,
+    "doc_text": "title\\ntext if both, else either"
+  },
+  "metrics": [
+    {
+      "dataset": "germanquad",
+      "k": 1,
+      "recall_at_k": 0.8339382940108893,
+      "success_at_k": 0.8339382940108893,
+      "mrr_at_k": 0.8339382940108893,
+      "num_queries": 2204,
+      "precision_at_k": 0.8339382940108893
+    },
+    {
+      "dataset": "germanquad",
+      "k": 5,
+      "recall_at_k": 0.9519056261343013,
+      "success_at_k": 0.9519056261343013,
+      "mrr_at_k": 0.8837946158499694,
+      "num_queries": 2204,
+      "precision_at_k": 0.19038112522685333
+    },
+    {
+      "dataset": "germanquad",
+      "k": 10,
+      "recall_at_k": 0.9673321234119783,
+      "success_at_k": 0.9673321234119783,
+      "mrr_at_k": 0.8859164794169327,
+      "num_queries": 2204,
+      "precision_at_k": 0.09673321234119427
+    }
+  ],
+  "overview": {
+    "queries": 2204,
+    "docs": 474,
+    "qrels": 2204,
+    "embedding_dim": 768,
+    "queries_without_relevant_docs": 0
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-09-30T04:09:21.331399+00:00",
+    "encode_seconds": 317.0,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}
