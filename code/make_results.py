@@ -99,7 +99,7 @@ def draw_flow(path: Path) -> None:
     import matplotlib.pyplot as plt
     from matplotlib.patches import FancyBboxPatch, Rectangle
     steps = ["2.204 Fragen,\n474 Passagen", "11 Retriever:\nRangliste je Frage", "Rang der\nGold-Passage",
-             "Kennzahl je Frage\n(z. B. MRR@10)", "Differenz je Frage:\nRetriever minus\nReferenz",
+             "Kennzahl je Frage\n(z. B. MRR@10)", "Differenz je Frage:\nzweiter minus\nerster Retriever",
              "Summe je Cluster,\nVorzeichen zufällig\n(B = 100.000)", "p-Wert und\nCluster-Bootstrap-\nIntervall",
              "Holm-Korrektur\nje Familie", "Urteil:\nH0 verworfen\noder nicht"]
     zones = [("A", "Daten und Rang", 0, 3), ("B", "Kennzahl und Differenz", 3, 5), ("C", "Test", 5, 7),
@@ -127,7 +127,7 @@ def draw_flow(path: Path) -> None:
             s_ = 1 if x1 > x0 else -1
             ax.annotate("", (x1 - s_ * w / 2, y1), (x0 + s_ * w / 2, y0), arrowprops=kw)
     ax.text(0.15, -0.3, "Legende: graue Fläche = Zone A bis D, Kasten = Arbeitsschritt, Pfeil = Reihenfolge.\n"
-            "Referenz: BM25, BM25-de oder bge-m3. Familie: alle Vergleiche mit derselben Referenz und Metrik.",
+            "Referenz: BM25, BM25-de oder bge-m3. Familie: Tests einer gemeinsamen Aussage (Tabelle 2).",
             fontsize=11, va="center")
     fig.savefig(path, dpi=200, bbox_inches="tight")
     plt.close(fig)
@@ -271,8 +271,9 @@ def main() -> None:
                     mfc="white" if expl else "black", capsize=4, markersize=7)
         ax.annotate(de(v), (ci[m][1], i), xytext=(6, 0), textcoords="offset points", va="center", fontsize=9)
     from matplotlib.lines import Line2D
-    ax.legend(handles=[Line2D([], [], marker="o", color="black", mfc="black", ls="", label="BM25, konfirmatorisch (gefüllt)"),
-                       Line2D([], [], marker="o", color="black", mfc="white", ls="", label="BM25-de, explorativ (offen)")],
+    mk_of = {m: mk[i % len(mk)] for i, m in enumerate(order)}  # legend uses the markers actually plotted
+    ax.legend(handles=[Line2D([], [], marker=mk_of["bm25"], color="black", mfc="black", ls="", label="BM25, konfirmatorisch (gefüllt)"),
+                       Line2D([], [], marker=mk_of["bm25_de"], color="black", mfc="white", ls="", label="BM25-de, explorativ (offen)")],
               loc="center left", bbox_to_anchor=(0, 0.64), fontsize=8, frameon=True)
     ax.set_yticks(range(len(order)), [LABEL[m] for m in order])
     lo = min(c[0] for c in ci.values())
@@ -280,7 +281,7 @@ def main() -> None:
     from matplotlib.ticker import FuncFormatter
     ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.2f}".replace(".", ",")))  # locale-independent decimal comma
     ax.set_xlabel("MRR@10")
-    ax.set_title(f"GermanQuAD: MRR@10 je Retriever (n = {n} Queries)")
+    ax.set_title(f"GermanQuAD: MRR@10 je Retriever (n = {n:,} Queries)".replace(",", "."))
     ax.grid(axis="x", alpha=0.3)
     fig.text(0.5, 0.005, f"Balken: 95-%-Cluster-Bootstrap-CI (Cluster = Gold-Passage, B = 10000, Seed {SEED}); x-Achse gekürzt",
              ha="center", fontsize=8)
