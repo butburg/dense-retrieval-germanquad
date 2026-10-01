@@ -1,0 +1,22 @@
+{
+  "experiment": {
+    "backend": "openai",
+    "model_name": "text-embedding-3-large",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 128,
+    "python": "3.11.15",
+    "openai": "3.22.1"
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-10-01T16:11:26.455655+00:00",
+    "encode_seconds": 41.3,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

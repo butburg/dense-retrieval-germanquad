@@ -1,13 +1,14 @@
-# Dense Retrieval mit sechs Embedding-Modellen im Vergleich zu BM25 auf GermanQuAD
+# Dense Retrieval mit neun Embedding-Modellen im Vergleich zu BM25 auf GermanQuAD
 
-Dieses Repository enthält Code, Notebooks, Tests und Ergebnisdateien eines Retrieval-Experiments auf dem deutschsprachigen Datensatz GermanQuAD. Verglichen werden sechs Embedding-Modelle (multilingual-e5-large, bge-m3, gte-multilingual-base, jina-embeddings-v3, text-embedding-3-small und text-embedding-3-large) mit einer BM25-Baseline im Retrieval-only-Setting auf dem GermanQuAD-Testsplit (Cosine-Ähnlichkeit, k = 1, 5, 10, Primärmetrik MRR@10, Seed 42).
+Dieses Repository enthält Code, Notebooks, Tests und Ergebnisdateien eines Retrieval-Experiments auf dem deutschsprachigen Datensatz GermanQuAD. Verglichen werden neun Embedding-Modelle (multilingual-e5-large, bge-m3, gte-multilingual-base, jina-embeddings-v3, text-embedding-3-small, text-embedding-3-large, Qwen3-Embedding-0.6B, snowflake-arctic-embed-l-v2.0 und jina-embeddings-v2-base-de) mit einer BM25-Baseline und BM25-de (BM25 mit deutscher Vorverarbeitung) im Retrieval-only-Setting auf dem GermanQuAD-Testsplit (Cosine-Ähnlichkeit, k = 1, 5, 10, Primärmetrik MRR@10, Seed 42). `compare_models.py` rechnet in einem Lauf 103 gepaarte Tests in 22 Familien (Holm je Familie, eine Familie = gleiche Referenz und Kennzahl). Konfirmatorisch ist nur die Familie der sechs zuerst festgelegten Modelle gegen BM25 auf MRR@10 (Holm über sechs Tests); die übrigen Vergleiche (drei weitere Modelle, BM25-de, Paarvergleiche, Success@k) sind explorativ.
 
 ## Inhalt
 
 | Pfad | Inhalt |
 |---|---|
-| `code/` | Notebooks 01 bis 05, Harness-Skripte (`embed_eval.py`, `compare_models.py`, `make_results.py`, `token_lengths.py`), BM25 (`scripts/run_bm25.py`), Demo (`demo_query.py`), wiederverwendbare Logik in `code/pylib/`; Details in `code/README.md` |
-| `code/output/harness/` | Ergebnisdateien des Hauptexperiments: Metriken und Per-Query-Ränge je Modell, `comparison_germanquad.json`, Tabellen und Abbildung 1 (`results/`), `VALIDATION.md` |
+| `code/` | Notebooks 01 bis 05, Harness-Skripte (`embed_eval.py`, `compare_models.py`, `make_results.py`, `robustness_holm.py`, `token_lengths.py`), BM25 (`scripts/run_bm25.py`, `bm25_german.py`), Demo (`demo_query.py`), wiederverwendbare Logik in `code/pylib/`; Details in `code/README.md` |
+| `code/output/harness/` | Ergebnisdateien der neun Modelle: Metriken und Per-Query-Ränge je Modell, alle Tests in `comparison_germanquad.json`, Tabellen und Abbildungen (`results/`), `VALIDATION.md` |
+| `code/output/bm25_de/` | BM25-de (Stoppwörter, Snowball-Stemming): Metriken und Per-Query-Ränge |
 | `code/output/germanquad/`, `code/output/bm25_v2/` | Normalisierte GermanQuAD-Daten (Queries, Passagen, Qrels) und BM25-Ergebnisse |
 | `code/output/analysis/`, `code/output/repro/`, `code/output/bm25/`, `code/output/dense_e5/` | Pilotanalyse und Reproduktionsläufe (BM25, multilingual-e5-large) |
 | `tests/` | pytest-Tests für Metriken, Signifikanztests, Embedder-Registry, Cache, Datensatz-I/O, Ergebnistabellen und Demo |
@@ -28,16 +29,17 @@ Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face
 
 ## Reproduktion über Notebook 05
 
-`code/05_hauptexperiment_germanquad.ipynb` beschreibt den Versuchsaufbau, lädt die persistierten Ergebnisse aus `code/output/harness/`, zeigt Tabelle 2 (Retrieval-Metriken), Tabelle 3 (konfirmatorische Tests gegen BM25), Paarvergleiche, Tabelle 4 (Sensitivität bei 512 Token) und Abbildung 1 und prüft die Kennzahlen gegen `comparison_germanquad.json`. Mit `ENCODE = SCORE = False` (Standard) läuft es in wenigen Sekunden ohne Netz, GPU und API. `ENCODE = True` berechnet die Vektoren neu (CPU, mehrere Stunden; OpenAI-Läufe benötigen den API-Schlüssel), `SCORE = True` rechnet Ranking und Tests aus dem Cache.
+`code/05_hauptexperiment_germanquad.ipynb` beschreibt den Versuchsaufbau, lädt die persistierten Ergebnisse aus `code/output/harness/`, zeigt die Retrieval-Metriken aller Retriever, die Vergleiche gegen BM25 (sechs konfirmatorisch, drei explorativ) und gegen BM25-de, Paarvergleiche, die Sensitivität bei 512 Token und Abbildung 1 und prüft Kennzahlen und Holm-Korrektur gegen `comparison_germanquad.json`. Mit `ENCODE = SCORE = False` (Standard) läuft es in wenigen Sekunden ohne Netz, GPU und API. `ENCODE = True` berechnet die Vektoren neu (CPU, mehrere Stunden; OpenAI-Läufe benötigen den API-Schlüssel), `SCORE = True` rechnet Ranking und Tests aus dem Cache.
 
 Die Läufe lassen sich auch einzeln über die Skripte starten (im Ordner `code/`):
 
 ```bash
-python embed_eval.py --dataset-dir output/germanquad --model <e5-large|bge-m3|gte-multilingual-base|jina-v3|openai-3-small|openai-3-large>
+python embed_eval.py --dataset-dir output/germanquad --model <e5-large|bge-m3|gte-multilingual-base|jina-v3|openai-3-small|openai-3-large|qwen3-embedding-0.6b|arctic-embed-l-v2|jina-v2-base-de>
 python embed_eval.py --dataset-dir output/germanquad --model bge-m3 --max-seq-length 512   # Sensitivität
-python scripts/run_bm25.py
-python compare_models.py
-python make_results.py
+python scripts/run_bm25.py && python bm25_german.py   # BM25 und BM25-de
+python compare_models.py                 # alle 103 Tests in 22 Familien
+python make_results.py                   # Tabellen und Abbildungen
+python robustness_holm.py                # Holm bei größeren Familien (Tabelle D7)
 ```
 
 Die Notebooks 01 bis 04 dokumentieren den Datensatz-PoC (Download, Parsing, BM25- und Dense-Pilot); sie erwarten Rohdaten unter `code/input/`, die per Notebook 01 aus dem Hugging-Face-Hub geladen werden.
@@ -62,7 +64,7 @@ Tests, die Modellgewichte oder den Embedding-Cache benötigen, werden ohne diese
 
 ## Ergebnisse
 
-Die maßgeblichen Zahlen stehen in `code/output/harness/results/table_main.md` (Tabelle 2), `table_significance.md` (Tabelle 3) und `table_len512.md` (Tabelle 4); die Grundlage bilden `code/output/harness/<Modell>/metrics_germanquad.json` und `comparison_germanquad.json`. Die Validierung der Läufe (Stack, Revisionen, Konsistenzprüfungen) steht in `code/output/harness/VALIDATION.md`.
+Die maßgeblichen Zahlen stehen in `code/output/harness/results/table_main.md` (alle Retriever), `table_significance.md` (alle Tests) und `table_len512.md` (Sensitivität); die Grundlage bilden `code/output/harness/<Modell>/metrics_germanquad.json` und `comparison_germanquad.json`; die Zuordnung der Tabellen zu den Dateien steht in `code/README.md`. Die Validierung der Läufe (Stack, Revisionen, Konsistenzprüfungen) steht in `code/output/harness/VALIDATION.md`.
 
 ## Sphinx-Dokumentation
 

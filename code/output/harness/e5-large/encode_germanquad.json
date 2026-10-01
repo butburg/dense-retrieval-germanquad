@@ -1,0 +1,32 @@
+{
+  "experiment": {
+    "backend": "sentence-transformers",
+    "model_name": "intfloat/multilingual-e5-large",
+    "query_prefix": "query: ",
+    "doc_prefix": "passage: ",
+    "normalize": true,
+    "batch_size": 32,
+    "model_revision": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 512,
+    "model_revision_hub_head": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3"
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-10-01T16:32:37.143816+00:00",
+    "encode_seconds": 814.5,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

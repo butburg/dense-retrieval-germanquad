@@ -1,17 +1,6 @@
 # Code-Bereich: Datensatz-PoC und Hauptexperiment
 
-Der Code-Bereich enthält zwei Teile: den abgeschlossenen Datensatz-PoC (Notebooks 01 bis 04), der Rohdaten in ein einheitliches Retrieval-Eingabeformat überführt und die Auswertung an einem ersten BM25- und Dense-Lauf erprobt, und das Hauptexperiment (Notebook 05 plus Harness-Skripte), das sechs Embedding-Modelle und BM25 auf GermanQuAD nach `docs/evaluation_protocol.md` vergleicht.
-
-## Aufgabenboard (Beads)
-
-Das lokale Beads-Board zeigt Aufgaben aus dem aktuellen Repository als Kanban-Ansicht. Voraussetzung ist Node.js. Im Repository-Stamm installierst du die festgelegten npm-Abhängigkeiten und startest das Board:
-
-```bash
-npm ci
-npm run board
-```
-
-Die Abhängigkeit und ihre Version sind in `package.json` und `package-lock.json` festgehalten. Das Board läuft lokal im Browser (127.0.0.1:3000), liest den Aufgabenstand über die installierte `bd`-CLI und kann Aufgaben auch bearbeiten.
+Der Code-Bereich enthält zwei Teile: den abgeschlossenen Datensatz-PoC (Notebooks 01 bis 04), der Rohdaten in ein einheitliches Retrieval-Eingabeformat überführt und die Auswertung an einem ersten BM25- und Dense-Lauf erprobt, und das Hauptexperiment (Notebook 05 plus Harness-Skripte), das neun Embedding-Modelle, BM25 und BM25-de auf GermanQuAD nach `docs/evaluation_protocol.md` vergleicht.
 
 ## Teil 1: Datensatz-PoC (01 bis 04, abgeschlossen)
 
@@ -29,17 +18,20 @@ Pilotwerte (BM25 und e5-large, Pilotanalyse in `code/output/analysis/`): Sie die
 
 ## Teil 2: Hauptexperiment (05 und Harness-Skripte)
 
-`05_hauptexperiment_germanquad.ipynb` ist in acht Schritte gegliedert (0 Überblick und Glossar, 1 Daten, 2 Encoding, 3 Ranking und Kennzahlen, 4 Signifikanztests, 5 Sensitivität 512 Tokens, 6 BM25 Standard und BM25-de, 7 Erweiterungsmodelle, 8 Zusammenfassung und Konsistenzprüfung); jeder Schritt beginnt mit „Was? Warum? Wie?“. Die Modelle sind vortrainiert: Das Encoding (474 Passagen und 2.204 Fragen zu Vektoren, Stunden auf CPU) ist der langsame Teil, das Ranking per Kosinus aus dem Cache dauert Sekunden. Zwei Schalter steuern die Neuberechnung: `ENCODE` (Vektoren berechnen, Cache) und `SCORE` (Ranking, Kennzahlen, Tests, BM25, BM25-de, Erweiterung aus dem Cache); beide stehen standardmäßig auf `False`, dann lädt das Notebook nur gespeicherte Ergebnisse (wenige Sekunden, ohne Netz). `ONLY = [...]` beschränkt die Läufe auf einzelne Modellschlüssel; die Dauer jedes gestarteten Schritts steht in `output/harness/run_log.jsonl`, die Encodierzeiten in `encode_germanquad.json` bzw. `metrics_germanquad.json`. Das Notebook liest die normalisierten Dateien in `code/output/germanquad/`; die Notebooks 01 und 02 sind nur nötig, um sie aus den Rohdaten neu zu erzeugen. Es zeigt Tabelle 2 (Qualität), Tabelle 3 (konfirmatorische Tests), Paarvergleiche, Tabelle 4 (512-Sensitivität), Abbildung 1, BM25-de und die Erweiterungsmodelle und prüft die Kennzahlen gegen die drei Vergleichsdateien.
+`05_hauptexperiment_germanquad.ipynb` ist in acht Schritte gegliedert (0 Überblick und Glossar, 1 Daten, 2 Encoding, 3 Ranking und Kennzahlen, 4 Signifikanztests, 5 Sensitivität 512 Tokens, 6 BM25 Standard und BM25-de, 7 drei explorativ getestete Modelle, 8 Zusammenfassung und Konsistenzprüfung); jeder Schritt beginnt mit „Was? Warum? Wie?“. Die Modelle sind vortrainiert: Das Encoding (474 Passagen und 2.204 Fragen zu Vektoren, Stunden auf CPU) ist der langsame Teil, das Ranking per Kosinus aus dem Cache dauert Sekunden. Zwei Schalter steuern die Neuberechnung: `ENCODE` (Vektoren aller neun Modelle berechnen, Cache) und `SCORE` (Ranking, BM25, BM25-de, Kennzahlen und alle Tests aus dem Cache); beide stehen standardmäßig auf `False`, dann lädt das Notebook nur gespeicherte Ergebnisse (wenige Sekunden, ohne Netz). `ONLY = [...]` beschränkt die Läufe auf einzelne Modellschlüssel; die Dauer jedes gestarteten Schritts steht in `output/harness/run_log.jsonl`, die Encodierzeiten in `encode_germanquad.json` bzw. `metrics_germanquad.json`. Das Notebook liest die normalisierten Dateien in `code/output/germanquad/`; die Notebooks 01 und 02 sind nur nötig, um sie aus den Rohdaten neu zu erzeugen. Es zeigt Tabelle 3 (Qualität), Tabelle 4 (Tests gegen BM25), Paarvergleiche, Tabelle 5 (BM25-de), Tabelle D4 (512-Sensitivität), Abbildung 1 und die drei explorativ getesteten Modelle und prüft Kennzahlen und Holm-Korrektur gegen `comparison_germanquad.json`.
 
-Retriever-Registry (`pylib/embedders.py`): `e5-large` (intfloat/multilingual-e5-large), `bge-m3` (BAAI/bge-m3), `gte-multilingual-base` (Alibaba-NLP/gte-multilingual-base), `jina-v3` (jinaai/jina-embeddings-v3), `openai-3-small` und `openai-3-large` (text-embedding-3-*, Key aus `EMBED_OPENAI_API_KEY`); dazu BM25 (`scripts/run_bm25.py`, Standard nur GermanQuAD, `--datasets gerlerb_v2` optional, Ausgabe `output/bm25_v2/`) und BM25-de (`bm25_german.py`, Stoppwörter und Snowball-Stemming, Ausgabe `output/bm25_de/`). Erweiterungsmodelle `qwen3-embedding-0.6b`, `arctic-embed-l-v2`, `jina-v2-base-de` laufen mit `--out-dir output/harness/ext`.
+Retriever-Registry (`pylib/embedders.py`): `e5-large` (intfloat/multilingual-e5-large), `bge-m3` (BAAI/bge-m3), `gte-multilingual-base` (Alibaba-NLP/gte-multilingual-base), `jina-v3` (jinaai/jina-embeddings-v3), `openai-3-small` und `openai-3-large` (text-embedding-3-*, Key aus `EMBED_OPENAI_API_KEY`); dazu BM25 (`scripts/run_bm25.py`, nur GermanQuAD, Ausgabe `output/bm25_v2/`) und BM25-de (`bm25_german.py`, Stoppwörter und Snowball-Stemming, Ausgabe `output/bm25_de/`). Die explorativ getesteten Modelle `qwen3-embedding-0.6b` (Qwen/Qwen3-Embedding-0.6B), `arctic-embed-l-v2` (Snowflake/snowflake-arctic-embed-l-v2.0) und `jina-v2-base-de` (jinaai/jina-embeddings-v2-base-de) stehen in derselben Registry und laufen wie die übrigen Modelle (Ausgabe `output/harness/<model>/`).
+
+Testfamilien: `compare_models.py` rechnet in einem Lauf alle 103 Tests in 22 Familien (Holm je Familie, eine Familie = gleiche Referenz und Kennzahl). Konfirmatorisch ist nur die im Evaluationsprotokoll festgelegte Familie der sechs Modelle in `EMBEDDERS` gegen BM25 auf MRR@10 (Holm über sechs Tests). Explorativ sind die Paare dieser sechs Modelle, Success@k gegen BM25, alle Vergleiche mit BM25-de und die drei Modelle in `EXTENSION` gegen BM25, BM25-de und bge-m3. `table_main.md` (Tabelle 3) und Abbildung 1 zeigen alle elf Retriever.
 
 Harness-Skripte:
 - `embed_eval.py`: ein Embedder je Aufruf; `--max-seq-length 512` für die Sensitivität (Ausgabe `<model>__len512`).
-- `compare_models.py`: gepaarte Tests (`paired_test` ist der gemeinsame Testkern von `compare_bm25_de.py` und `compare_extension.py`) (Cluster-Sign-Flip, Cluster-Bootstrap, Holm, exakter McNemar) nach `comparison_germanquad.json`.
-- `make_results.py`: Tabellen und Abbildung 1 nach `output/harness/results/`.
+- `compare_models.py`: alle gepaarten Tests (Cluster-Sign-Flip, Cluster-Bootstrap, Holm je Familie) nach `comparison_germanquad.json`.
+- `make_results.py`: Tabellen, Abbildung 1, Paarmatrix der MRR@10-Differenzen (`fig_pair_matrix.png`, ohne Tests) und Ablaufschema der Tests (`fig_test_flow.png`) nach `output/harness/results/`.
+- `robustness_holm.py`: Holm-Korrektur der 36 Vergleiche mit BM25-de bei größeren Familien (Tabelle D7), nur aus gespeicherten p-Werten.
 - `token_lengths.py`: Tokenlängen der Passagen nach `output/harness/token_lengths.json`.
 
-Ausgaben unter `output/harness/`: `<model>/metrics_germanquad.json` und `per_query_germanquad.csv` je Modell, `comparison_germanquad.json`, `results/` (`table_main`, `table_significance`, `table_len512`, `fig_mrr10_ci`), `token_lengths.json`, `VALIDATION.md` (Validierung, Stack, Revisionen). Der Embedding-Cache `output/harness/cache/` ist git-ignoriert.
+Ausgaben unter `output/harness/`: `<model>/metrics_germanquad.json` und `per_query_germanquad.csv` je Modell, `comparison_germanquad.json`, `results/` (`table_main`, `table_significance`, `table_len512`, `table_robustness_holm`, `fig_mrr10_ci`, `fig_pair_matrix`, `fig_test_flow`), `token_lengths.json`, `VALIDATION.md` (Validierung, Stack, Revisionen). Der Embedding-Cache `output/harness/cache/` ist git-ignoriert.
 
 Reproduktion (im Ordner `code/`, Pakete aus `requirements-embed.txt`):
 
@@ -47,14 +39,33 @@ Reproduktion (im Ordner `code/`, Pakete aus `requirements-embed.txt`):
 python embed_eval.py --dataset-dir output/germanquad --model <key> --stage encode   # langsam: Vektoren in den Cache
 python embed_eval.py --dataset-dir output/germanquad --model <key> --stage score    # schnell: Ranking und Kennzahlen aus dem Cache (ohne --stage: beides)
 python embed_eval.py --dataset-dir output/germanquad --model <bge-m3|gte-multilingual-base|jina-v3> --max-seq-length 512
-python scripts/run_bm25.py
-python compare_models.py
+python scripts/run_bm25.py && python bm25_german.py    # BM25 und BM25-de
+python compare_models.py                                # alle 103 Tests
 python make_results.py
-python bm25_german.py && python compare_bm25_de.py      # BM25-de (explorativ)
-python compare_extension.py                             # nach embed_eval.py ... --out-dir output/harness/ext
+python robustness_holm.py                               # Robustheit: Holm über neun Modelle (A je Metrik, B alle 36), nur aus gespeicherten p-Werten
 ```
 
 Details zur Validierung: `output/harness/VALIDATION.md`.
+
+## Ergebnisdateien je Tabelle
+
+Die Tabellen und Abbildung 1 der schriftlichen Ausarbeitung stammen aus folgenden Dateien (Pfade relativ zum Repository):
+
+| Tabelle / Abbildung | Inhalt | Ergebnisdatei |
+|---|---|---|
+| Tabelle 3, Tabelle D1 | Metriken aller Retriever | `code/output/harness/<Durchlauf>/metrics_germanquad.json` (neun Durchläufe, Schlüssel aus `pylib/embedders.py`), BM25 `code/output/bm25_v2/bm25_results.json`, BM25-de `code/output/bm25_de/bm25_results.json`; aufbereitet in `results/table_main.md` |
+| Tabellen 4 und 5, D2, D3, D5, D6 | alle Tests (103 in 22 Familien) | `code/output/harness/comparison_germanquad.json`, aufbereitet in `code/output/harness/results/table_significance.md` |
+| Tabelle D4 | Sensitivität 512 Tokens | Durchläufe `bge-m3__len512`, `gte-multilingual-base__len512`, `jina-v3__len512`; aufbereitet in `code/output/harness/results/table_len512.md` |
+| Tabelle D7 | Holm bei größeren Familien | `code/output/harness/robustness_holm_nine.json`, `results/table_robustness_holm.md` |
+| Abbildung 1 | MRR@10 mit 95-%-Konfidenzintervall | `code/output/harness/results/fig_mrr10_ci.png` |
+| Abbildung 2 | Ablauf der gepaarten Tests | `code/output/harness/results/fig_test_flow.png` |
+| Abbildung D1 | MRR@10-Differenzen aller 55 Paare | `code/output/harness/results/fig_pair_matrix.png` |
+
+Per-Query-Ränge liegen als `per_query_germanquad.csv` in den Verzeichnissen der Durchläufe bzw. als `per_query_ranks.csv` unter `code/output/bm25_v2/` und `code/output/bm25_de/`. Tokenlängen der Passagen stehen in `code/output/harness/token_lengths.json`, Validierung und Reproduktion in `code/output/harness/VALIDATION.md` und `code/output/repro/REPRO.md`.
+
+MTEB-Abgleich: Das Referenzergebnis `results/intfloat__multilingual-e5-large/ab10c1a7…/GermanQuAD-Retrieval.json` aus dem Repository embeddings-benchmark/results wird mit `code/output/harness/e5-large/metrics_germanquad.json` verglichen, entsprechend `results/Snowflake__snowflake-arctic-embed-l-v2.0/edc2df7b…/GermanQuAD-Retrieval.json` mit `code/output/harness/arctic-embed-l-v2/metrics_germanquad.json`. Die Datensatzrevision der MTEB-Aufgabe ist `f5c87ae5`, die eigene `9af36714`.
+
+Encoding-Zeiten der Durchläufe mit nativer Eingabelänge (Dokumente und Queries ohne Cache-Treffer, Feld `encode_seconds` in `metrics_germanquad.json`): multilingual-e5-large 464,6 s, bge-m3 766,2 s, gte-multilingual-base 317,0 s, jina-embeddings-v3 1.751,0 s, text-embedding-3-small 21,3 s, text-embedding-3-large 25,1 s (OpenAI-API), snowflake-arctic-embed-l-v2.0 613,0 s, Qwen3-Embedding-0.6B 1.240,5 s, jina-embeddings-v2-base-de 405,4 s.
 
 ## GermanQuAD: Eingangsdateien und Felder
 
@@ -86,7 +97,7 @@ Die Dense-Auswertung verwendet dieselben `k`-Werte und dieselbe Evaluationslogik
 
 Der Harness bewertet Dense-Retriever auf jedem normalisierten Datensatz (Retrieval only, Cosine, k=1/5/10).
 
-- Eingabe: `--dataset-dir` mit `{docs,queries,qrels}.normalized.jsonl`, `--model <key>` aus der Registry `pylib/embedders.py` (`e5-large`, `bge-m3`, `gte-multilingual-base`, `jina-v3`, `openai-3-small`, `openai-3-large`; Backend sentence-transformers oder OpenAI mit Key aus `EMBED_OPENAI_API_KEY`), optional `--max-seq-length`, `--out-dir` (Default `output/harness`).
+- Eingabe: `--dataset-dir` mit `{docs,queries,qrels}.normalized.jsonl`, `--model <key>` aus der Registry `pylib/embedders.py` (`e5-large`, `bge-m3`, `gte-multilingual-base`, `jina-v3`, `openai-3-small`, `openai-3-large`, `qwen3-embedding-0.6b`, `arctic-embed-l-v2`, `jina-v2-base-de`; Backend sentence-transformers oder OpenAI mit Key aus `EMBED_OPENAI_API_KEY`), optional `--max-seq-length`, `--out-dir` (Default `output/harness`).
 - Verarbeitung: Präfixe, Tasks und Normalisierung je Modellkonfiguration, Embeddings als `.npy` gecacht, Ranking und Metriken aus `pylib/retrieval_metrics.py`.
 - Ausgabe: `output/harness/<run_name>/metrics_<dataset>.json` (Metriken, Konfiguration, Versionen), `per_query_<dataset>.csv` (Rang des ersten relevanten Docs), Cache in `output/harness/cache/` (git-ignoriert). Validierung: `output/harness/VALIDATION.md`.
 

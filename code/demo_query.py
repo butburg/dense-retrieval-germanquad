@@ -45,7 +45,7 @@ def build_bm25(doc_ids: list[str], docs_by_id: dict):
         import run_bm25 as rb
     except ImportError as ex:
         fail(f"BM25-Abhängigkeiten fehlen ({ex}). Umgebung: pip install -r code/requirements-embed.txt")
-    bm25 = rb.BM25Okapi([rb.tokenize_de(rb.compose_doc_text(docs_by_id[i])) for i in doc_ids],
+    bm25 = rb.BM25Okapi([rb.tokenize_de(rb.doc_text(docs_by_id[i])) for i in doc_ids],
                         k1=rb.BM25_K1, b=rb.BM25_B, epsilon=rb.BM25_EPSILON)
     return bm25, rb.tokenize_de
 

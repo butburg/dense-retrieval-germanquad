@@ -1,0 +1,32 @@
+{
+  "experiment": {
+    "backend": "sentence-transformers",
+    "model_name": "Snowflake/snowflake-arctic-embed-l-v2.0",
+    "query_prefix": "query: ",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 16,
+    "model_revision": "ac6544c8a46e00af67e330e85a9028c66b8cfd9a",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 8192,
+    "model_revision_hub_head": "ac6544c8a46e00af67e330e85a9028c66b8cfd9a"
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-10-01T17:00:50.008519+00:00",
+    "encode_seconds": 982.8,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

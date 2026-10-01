@@ -19,16 +19,10 @@ import numpy as np
 CODE = Path(__file__).resolve().parent
 sys.path.insert(0, str(CODE / "pylib"))
 from embedders import Embedder, get_config, REGISTRY  # noqa: E402
-from local_dataset_io import load_jsonl  # noqa: E402
+from local_dataset_io import doc_text, load_jsonl  # noqa: E402
 from retrieval_metrics import K_VALUES, build_gold, compute_metrics, first_relevant_ranks, rank_cosine  # noqa: E402
 
 THR = 1
-
-
-def doc_text(d: dict) -> str:
-    """title + newline + text if both present, else whichever exists."""
-    title, text = str(d.get("title") or "").strip(), str(d.get("text") or "").strip()
-    return f"{title}\n{text}" if title and text else title or text
 
 
 def cache_key_parts(cfg, is_query: bool) -> list:
@@ -163,10 +157,11 @@ def main() -> None:
     # Rank of the best relevant doc over the full ranking (None-equivalent: empty if no gold).
     sims = q_emb @ d_emb.T
     gidx = {i: n for n, i in enumerate(doc_ids)}
-    per_q = []
+    per_q, ties = [], 0  # ties: queries where a non-gold doc has exactly the gold similarity (gold counts as ahead)
     for qi, qid in enumerate(qids):
         gs = [gidx[x] for x in gold.get(qid, ())]
         rank = int((sims[qi] > sims[qi][gs].max()).sum()) + 1 if gs else ""
+        ties += bool(gs) and int((sims[qi] == sims[qi][gs].max()).sum()) > len(gs)
         per_q.append((qid, rank, len(gs)))
 
     score_seconds = round(time.time() - t1, 2)
@@ -179,7 +174,8 @@ def main() -> None:
                               "doc_text": "title\\ntext if both, else either"},
                "metrics": metrics,
                "overview": {"queries": len(queries), "docs": len(docs), "qrels": len(qrels), "embedding_dim": int(d_emb.shape[1]),
-                            "queries_without_relevant_docs": sum(q not in gold for q in qids)},
+                            "queries_without_relevant_docs": sum(q not in gold for q in qids),
+                            "queries_with_gold_ties": ties},
                "environment": {**env, **enc_env, "score_seconds": score_seconds, "cache_hit_docs": d_hit, "cache_hit_queries": q_hit}}
     (out / f"metrics_{ds}.json").write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
     print(json.dumps(metrics, indent=1), f"encode_seconds={enc_env['encode_seconds']} score_seconds={score_seconds}")

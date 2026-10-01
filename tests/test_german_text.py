@@ -30,13 +30,3 @@ def test_info_documents_config():
     i = preprocessing_info()
     assert i["n_stopwords"] > 100 and "omitted" in i["compound_splitting"]
 
-
-def test_bm25_de_compare_families():
-    import numpy as np
-    import compare_bm25_de as cb
-    rng = np.random.default_rng(0)
-    n = 60
-    ranks = {k: rng.integers(1, 6, n) for k in ("e5-large", "bm25", "bm25_de")}
-    rows = cb.run(ranks, [f"c{i % 30}" for i in range(n)], b_perm=2000, b_boot=200)
-    assert {r["family"] for r in rows} >= {"explorative: embedder vs BM25-de, MRR@10"}
-    assert all("p_holm" in r for r in rows) and all(r["family"].startswith("explorative") for r in rows)

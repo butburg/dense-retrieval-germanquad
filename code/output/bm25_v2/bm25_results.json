@@ -1,21 +1,16 @@
 {
-  "run_timestamp_utc": "2026-09-29T22:26:55.063721+00:00",
+  "run_timestamp_utc": "2026-10-01T17:27:23.134401+00:00",
   "experiment": {
     "retriever": "BM25Okapi",
     "python_version": "3.11.15",
     "package": "rank_bm25",
     "package_version": "0.2.2",
-    "pandas_version": "3.0.6",
+    "pandas_version": "2.3.3",
     "datasets": {
       "germanquad": {
         "queries": "output/germanquad/queries.normalized.jsonl",
         "docs": "output/germanquad/docs.normalized.jsonl",
         "qrels": "output/germanquad/qrels.normalized.jsonl"
-      },
-      "gerlerb_v2": {
-        "queries": "output/gerlerb_v2/queries.normalized.jsonl",
-        "docs": "output/gerlerb_v2/docs.normalized.jsonl",
-        "qrels": "output/gerlerb_v2/qrels.normalized.jsonl"
       }
     },
     "split": "normalized:local",
@@ -48,14 +43,6 @@
       "qrels": 2204,
       "queries_without_qrels": 0,
       "queries_without_relevant_docs": 0
-    },
-    {
-      "dataset": "gerlerb_v2",
-      "queries": 367,
-      "docs": 89851,
-      "qrels": 367,
-      "queries_without_qrels": 0,
-      "queries_without_relevant_docs": 0
     }
   ],
   "metrics": [
@@ -82,30 +69,6 @@
       "success_at_k": 0.9646098003629764,
       "mrr_at_k": 0.8844038976752223,
       "num_queries": 2204
-    },
-    {
-      "dataset": "gerlerb_v2",
-      "k": 1,
-      "recall_at_k": 0.20708446866485014,
-      "success_at_k": 0.20708446866485014,
-      "mrr_at_k": 0.20708446866485014,
-      "num_queries": 367
-    },
-    {
-      "dataset": "gerlerb_v2",
-      "k": 5,
-      "recall_at_k": 0.3651226158038147,
-      "success_at_k": 0.3651226158038147,
-      "mrr_at_k": 0.2662125340599455,
-      "num_queries": 367
-    },
-    {
-      "dataset": "gerlerb_v2",
-      "k": 10,
-      "recall_at_k": 0.4141689373297003,
-      "success_at_k": 0.4141689373297003,
-      "mrr_at_k": 0.2732126638121189,
-      "num_queries": 367
     }
   ]
 }

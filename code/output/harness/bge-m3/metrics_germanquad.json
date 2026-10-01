@@ -65,15 +65,18 @@
     "docs": 474,
     "qrels": 2204,
     "embedding_dim": 1024,
-    "queries_without_relevant_docs": 0
+    "queries_without_relevant_docs": 0,
+    "queries_with_gold_ties": 0
   },
   "environment": {
     "python": "3.11.15",
     "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "numpy": "2.4.6",
     "cpu_count": 4,
-    "timestamp_utc": "2026-09-30T04:22:10.008572+00:00",
-    "encode_seconds": 766.2,
+    "timestamp_utc": "2026-10-01T17:16:44.653759+00:00",
+    "encode_seconds": 951.8,
+    "encode_source": "measured in this run",
+    "score_seconds": 0.09,
     "cache_hit_docs": false,
     "cache_hit_queries": false
   }

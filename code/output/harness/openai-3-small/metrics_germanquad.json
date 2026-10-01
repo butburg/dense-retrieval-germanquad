@@ -17,8 +17,8 @@
       "returned_models": [
         "text-embedding-3-small"
       ],
-      "first_request_utc": "2026-09-30T04:04:06.949732+00:00",
-      "last_request_utc": "2026-09-30T04:04:26.658242+00:00",
+      "first_request_utc": "2026-10-01T16:10:23.150646+00:00",
+      "last_request_utc": "2026-10-01T16:10:44.081530+00:00",
       "n_requests": 22
     },
     "similarity": "cosine (dot of L2-normalised embeddings)",
@@ -64,16 +64,19 @@
     "docs": 474,
     "qrels": 2204,
     "embedding_dim": 1536,
-    "queries_without_relevant_docs": 0
+    "queries_without_relevant_docs": 0,
+    "queries_with_gold_ties": 0
   },
   "environment": {
     "python": "3.11.15",
     "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
     "numpy": "2.4.6",
     "cpu_count": 4,
-    "timestamp_utc": "2026-09-30T04:04:27.071935+00:00",
-    "encode_seconds": 21.3,
-    "cache_hit_docs": false,
-    "cache_hit_queries": false
+    "timestamp_utc": "2026-10-01T17:49:33.661939+00:00",
+    "encode_seconds": 22.2,
+    "encode_source": "earlier encoding (encode_*.json)",
+    "score_seconds": 0.22,
+    "cache_hit_docs": true,
+    "cache_hit_queries": true
   }
 }
