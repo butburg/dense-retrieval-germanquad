@@ -14,4 +14,4 @@
 | snowflake-arctic-embed-l-v2.0 | 0,944 | 0,912 | 0,981 | 0,991 | 0,942 | Snowflake/snowflake-arctic-embed-l-v2.0@ac6544c8a46e |
 | jina-embeddings-v2-base-de | 0,920 | 0,880 | 0,968 | 0,983 | 0,918 | jinaai/jina-embeddings-v2-base-de@3f9eede87572 |
 
-GermanQuAD (Test), n = 2204 Queries, 474 Cluster (Gold-Passagen), Corpus 474 Passagen; Primärmetrik MRR@10, alle Werte auf dem vollen Ranking, Cosine-Similarity (BM25: BM25Okapi). Modelle mit nativer Eingabelänge; BM25-de und die drei nachträglich aufgenommenen Modelle werden nur explorativ getestet, die konfirmatorische Familie umfasst die sechs zuerst festgelegten Modelle. Fehlende Läufe: keine
+GermanQuAD (Test), n = 2204 Queries, 474 Cluster (Gold-Passagen), Corpus 474 Passagen; Primärmetrik MRR@10, alle Werte auf dem vollen Ranking, Cosine-Similarity (BM25: BM25Okapi). Modelle mit nativer Eingabelänge; Kennzahlen deskriptiv, getestet wird nur MRR@10 (table_significance.md). Fehlende Läufe: keine

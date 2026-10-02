@@ -58,7 +58,7 @@ REGISTRY: dict[str, EmbedderConfig] = {c.key: c for c in [
                    revision="ab036b023d30b4d1138c4c3bfa9f0c445ab455d6",
                    code_repo="jinaai/xlm-roberta-flash-implementation",
                    code_revision="bd55a5ec8e6c0fb1d6c26efb4b6a4a74ce8a88d3"),
-    # --- Added later, tested exploratively only (compare_models.EXTENSION) ---
+    # --- Weitere Modelle der neun-Modelle-Liste (compare_models.MODELS) ---
     # Model card + config_sentence_transformers.json: prompts {"query": "Instruct: Given a web search query,
     # retrieve relevant passages that answer the query\nQuery:", "document": ""} -> prompt_name="query" for queries only.
     # Native context 32k; max_seq_length capped at 8192 (longest GermanQuAD passage ~2.7k tokens -> no truncation).

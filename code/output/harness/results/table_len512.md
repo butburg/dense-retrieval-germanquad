@@ -1,4 +1,4 @@
-# Sensitivität Eingabelänge (explorativ, ohne Holm)
+# Sensitivität Eingabelänge (deskriptiv, ohne Test)
 
 nativ vs. max_seq_length = 512 (nur Passagen); CI: 95-%-Cluster-Bootstrap der Differenz (B = 10000, Seed 42); keine p-Werte.
 

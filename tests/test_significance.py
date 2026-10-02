@@ -36,32 +36,25 @@ def test_holm():
     assert np.allclose(holm([0.01], family_size=6), [0.06])
 
 
-def test_compare_mini_fixture():
-    clusters = ["a", "a", "b", "b", "c", "d"]
-    ranks = {"bm25": np.array([2, 3, 1, 5, 20, 0]), "e5-large": np.array([1, 1, 1, 2, 1, 3]),
-             "bge-m3": np.array([1, 1, 1, 1, 1, 1])}
-    res = cm.compare(ranks, clusters, b_perm=10_000, b_boot=500)
-    conf = [r for r in res["tests"] if r["family"].startswith("confirmatory")]
-    assert [r["b"] for r in conf] == ["e5-large", "bge-m3"]
-    r = conf[0]
-    assert r["n_nonzero_clusters"] == 4 and r["p_method"] == "exact" and r["not_informative"]
-    assert r["p_holm"] >= r["p_cluster_signflip"] and r["diff_b_minus_a"] > 0
-    s1 = next(x for x in res["tests"] if x["metric"] == "Success@1" and x["b"] == "bge-m3")
-    assert abs(s1["diff_b_minus_a"] - 5 / 6) < 1e-12
-    assert any(x["family"].startswith("explorative: embedder pairs") for x in res["tests"])
-
-
-def test_compare_all_families_one_run():
-    """Six confirmatory models, BM25-de and three extension models: 22 families, 103 tests."""
-    rng = np.random.default_rng(0)
-    n = 60
+def _ranks(n=60, seed=0):
+    rng = np.random.default_rng(seed)
     clusters = [f"c{i % 20}" for i in range(n)]
     base = rng.integers(3, 8, n)
     ranks = {"bm25": base, "bm25_de": base + 1}
-    for i, m in enumerate(cm.EMBEDDERS + cm.EXTENSION):
+    for i, m in enumerate(cm.MODELS):
         ranks[m] = np.maximum(1, base - i % 3)
+    return ranks, clusters
+
+
+def test_compare_55_tests_in_four_families():
+    ranks, clusters = _ranks()
     res = cm.compare(ranks, clusters, b_perm=500, b_boot=50)
-    fams = {r["family"] for r in res["tests"]}
-    assert len(res["tests"]) == 103 and len(fams) == 22
-    r = next(t for t in res["tests"] if t["b"] == "jina-v2-base-de" and t["a"] == "bge-m3" and t["metric"] == "MRR@10")
-    assert r["diff_b_minus_a"] > 0 and "p_holm" in r  # jina-v2-base-de ranks the gold passage higher
+    sizes = {}
+    for r in res["tests"]:
+        sizes[r["family"][:2]] = sizes.get(r["family"][:2], 0) + 1
+    assert len(res["tests"]) == 55 and sizes == {"F1": 36, "F2": 9, "F3": 9, "F4": 1}
+    assert all(r["metric"] == "MRR@10" for r in res["tests"])
+    f4 = next(r for r in res["tests"] if r["family"].startswith("F4"))
+    assert f4["p_holm"] == f4["p_cluster_signflip"]  # Familie mit einem Test: keine Korrektur
+    r = next(t for t in res["tests"] if t["b"] == "jina-v2-base-de" and t["a"] == "bm25")
+    assert r["diff_b_minus_a"] > 0 and r["p_holm"] >= r["p_cluster_signflip"]
