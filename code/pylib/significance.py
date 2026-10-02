@@ -1,7 +1,7 @@
 """Paired significance tools following docs/evaluation_protocol.md (cluster level).
 
-Same estimators as the pilot script ``analysis_germanquad.py`` (cluster sign-flip with one sign per
-gold-document cluster, ratio-estimator cluster bootstrap, Holm), factored into functions.
+Estimators: cluster sign-flip test with one sign per gold-document cluster, ratio-estimator
+cluster bootstrap and Holm correction.
 Every call creates its own ``numpy.random.default_rng(seed)`` so results do not depend on call order.
 """
 from __future__ import annotations

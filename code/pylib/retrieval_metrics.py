@@ -1,4 +1,4 @@
-"""Retrieval-only ranking and metric logic (same definitions as repro_germanquad.py)."""
+"""Retrieval-only ranking and metric logic (Recall, Success, MRR and Precision at k)."""
 from __future__ import annotations
 
 import numpy as np

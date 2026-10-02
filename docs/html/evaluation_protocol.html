@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Evaluationsprotokoll &#8212; dense-retrieval-germanquad  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=7f41d439"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="pylib" href="pylib.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="evaluationsprotokoll">
+<h1>Evaluationsprotokoll<a class="headerlink" href="#evaluationsprotokoll" title="Link to this heading">¶</a></h1>
+<p>Dieses Dokument beschreibt Datensatz, Retriever, Metriken und statistische Tests des Hauptexperiments. Die Umsetzung liegt in <code class="docutils literal notranslate"><span class="pre">code/embed_eval.py</span></code>, <code class="docutils literal notranslate"><span class="pre">code/compare_models.py</span></code> und <code class="docutils literal notranslate"><span class="pre">code/pylib/</span></code>.</p>
+<section id="datensatz">
+<h2>Datensatz<a class="headerlink" href="#datensatz" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>GermanQuAD-Retrieval, Testsplit: 2.204 Fragen, 474 Passagen, je Frage eine relevante Passage; normalisiert in <code class="docutils literal notranslate"><span class="pre">code/output/germanquad/</span></code>.</p></li>
+<li><p>Quellen: <code class="docutils literal notranslate"><span class="pre">mteb/germanquad-retrieval</span></code> (Revision 9af36714ebd9bba5235c4b9862779adaddbfae52; corpus, queries) und <code class="docutils literal notranslate"><span class="pre">mteb/germanquad-retrieval-qrels</span></code> (Revision ed232776ce5d736028c1da18e81ab7048969f369; Split test), geladen über <code class="docutils literal notranslate"><span class="pre">code/01_dataset_download.ipynb</span></code>.</p></li>
+</ul>
+</section>
+<section id="retriever">
+<h2>Retriever<a class="headerlink" href="#retriever" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Baselines: BM25 (<code class="docutils literal notranslate"><span class="pre">code/scripts/run_bm25.py</span></code>, Ausgabe <code class="docutils literal notranslate"><span class="pre">code/output/bm25_v2/</span></code>) und BM25-de (<code class="docutils literal notranslate"><span class="pre">code/bm25_german.py</span></code>; Stoppwörter aus stopwordsiso, Snowball-Stemmer).</p></li>
+<li><p>Embedding-Modelle (Dense Retrieval, Dokumentebene, Kosinus-Ähnlichkeit): intfloat/multilingual-e5-large, BAAI/bge-m3, Alibaba-NLP/gte-multilingual-base, jinaai/jina-embeddings-v3, OpenAI text-embedding-3-small, OpenAI text-embedding-3-large, Qwen/Qwen3-Embedding-0.6B, Snowflake/snowflake-arctic-embed-l-v2.0, jinaai/jina-embeddings-v2-base-de. Alle neun Modelle werden gleich behandelt. Modellspezifische Präfixe und Adapter folgen der Modellkarte und stehen in <code class="docutils literal notranslate"><span class="pre">code/pylib/embedders.py</span></code>.</p></li>
+</ul>
+</section>
+<section id="metriken">
+<h2>Metriken<a class="headerlink" href="#metriken" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Recall&#64;k, Success&#64;k, MRR&#64;k und Precision&#64;k für k = 1, 5, 10.</p></li>
+<li><p>Primärmetrik: MRR&#64;10. Getestet wird nur MRR&#64;10; die übrigen Metriken und k werden deskriptiv berichtet.</p></li>
+</ul>
+</section>
+<section id="signifikanztests">
+<h2>Signifikanztests<a class="headerlink" href="#signifikanztests" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Gepaarter Vorzeichenwechsel-Randomisierungstest auf Cluster-Ebene (Cluster = Gold-Passage der Frage), zweiseitig, B = 100.000, p = (Treffer + 1)/(B + 1). Bei n≠0 ≤ 16 Clustern mit Differenz ≠ 0 wird der p-Wert exakt über alle 2^n Vorzeichenkombinationen berechnet. Monte-Carlo-p-Werte an der Auflösungsgrenze werden als „≤ 1/(B + 1)“ berichtet.</p></li>
+<li><p>Effektgröße: Differenz der Mittelwerte mit 95-%-Perzentil-Intervall aus einem Cluster-Bootstrap (B = 10.000).</p></li>
+<li><p>Seeds: <code class="docutils literal notranslate"><span class="pre">numpy.random.default_rng(42)</span></code>, für jeden Vergleich und jedes Verfahren neu initialisiert, damit das Ergebnis nicht von der Reihenfolge der Vergleiche abhängt.</p></li>
+<li><p>Testfamilien mit Holm-Korrektur je Familie (Familiengröße = Testzahl, alpha = 0,05): F1 alle 36 Paare der neun Modelle; F2 neun Modelle gegen BM25; F3 neun Modelle gegen BM25-de; F4 BM25-de gegen BM25 (ein Test, unkorrigiert). Zusammen 55 Tests, keine Korrektur über Familien hinweg.</p></li>
+<li><p>Berichtet werden p-Werte roh und Holm-korrigiert, Dataset, k, Seed und Modellversion.</p></li>
+<li><p>Deckeneffekt: Beträgt n≠0 weniger als 20 (bei Success&#64;k analog b + c &lt; 20), gilt ein Vergleich als „nicht aussagekräftig“. Der Test bleibt in seiner Familie, n≠0 wird für jeden Vergleich ausgegeben.</p></li>
+<li><p>Ergebnisdateien: <code class="docutils literal notranslate"><span class="pre">code/output/harness/comparison_germanquad.json</span></code>, <code class="docutils literal notranslate"><span class="pre">code/output/harness/results/table_significance.md</span></code>.</p></li>
+</ul>
+</section>
+<section id="modellversionierung">
+<h2>Modellversionierung<a class="headerlink" href="#modellversionierung" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Hugging-Face-Modelle: Gewichte über den Commit-Hash gepinnt, Revision nachgeladenen Remote-Codes gepinnt; beides steht in <code class="docutils literal notranslate"><span class="pre">metrics_germanquad.json</span></code> des jeweiligen Durchlaufs.</p></li>
+<li><p>OpenAI-Modelle: angefragter und zurückgegebener Modellname, Version des <code class="docutils literal notranslate"><span class="pre">openai</span></code>-Pakets, UTC-Zeitstempel der ersten und letzten Anfrage, volle Standarddimension (1536 bzw. 3072). Jeder Text wird einmal eingebettet und gecacht; ein erneuter Abruf ist ein neuer Lauf. API-Vektoren sind nicht bitgenau reproduzierbar.</p></li>
+<li><p>Je Lauf protokolliert: Python-, sentence-transformers-, transformers-, torch-, numpy- und rank_bm25-Version, Hardware und Laufzeit.</p></li>
+</ul>
+</section>
+<section id="eingabelange">
+<h2>Eingabelänge<a class="headerlink" href="#eingabelange" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>143 von 474 Passagen haben mehr als 512 Tokens (bge-m3-Tokenizer; Median 349, Maximum 2.652; <code class="docutils literal notranslate"><span class="pre">code/output/harness/token_lengths.json</span></code>, erzeugt von <code class="docutils literal notranslate"><span class="pre">code/token_lengths.py</span></code>).</p></li>
+<li><p>Hauptanalyse: native maximale Eingabelänge je Modell (Modellstandard, <code class="docutils literal notranslate"><span class="pre">max_seq_length</span></code> nicht überschrieben, je Modell protokolliert). multilingual-e5-large kürzt auf 512 Tokens (Modellgrenze).</p></li>
+<li><p>Sensitivitätsanalyse (deskriptiv, ohne Test): bge-m3, gte-multilingual-base und jina-embeddings-v3 zusätzlich mit <code class="docutils literal notranslate"><span class="pre">max_seq_length</span> <span class="pre">=</span> <span class="pre">512</span></code> (<code class="docutils literal notranslate"><span class="pre">--max-seq-length</span> <span class="pre">512</span></code>, Durchläufe <code class="docutils literal notranslate"><span class="pre">&lt;Modell&gt;__len512</span></code>, Tabelle <code class="docutils literal notranslate"><span class="pre">code/output/harness/results/table_len512.md</span></code>). Alle 55 Tests nutzen nur die Läufe mit nativer Länge.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">dense-retrieval-germanquad</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pylib.html">pylib</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Evaluationsprotokoll</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#datensatz">Datensatz</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#retriever">Retriever</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#metriken">Metriken</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#signifikanztests">Signifikanztests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modellversionierung">Modellversionierung</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eingabelange">Eingabelänge</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="pylib.html" title="previous chapter">pylib</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

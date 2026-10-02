@@ -24,6 +24,8 @@ Der Befehl liest die Konfiguration aus `docs/conf.py` und legt die HTML-Dateien 
 
 ## Dokumentation aufrufen
 
+Im Abgabe-Repository liegt die fertig gerenderte Doku unter `docs/html/index.html` und lässt sich ohne eigenen Build öffnen; zum Neubauen dient der Befehl oben (zusätzlich `python -m pip install myst-parser` für die Markdown-Seite).
+
 Öffne die Startseite nach dem Build im Browser:
 
 ```bash
