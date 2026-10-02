@@ -1,6 +1,6 @@
 """German text preprocessing for lexical retrieval (lowercase, tokenization, stopwords, Snowball stemming).
 
-Components: regex tokenizer identical to the standard BM25 run (``scripts/run_bm25.py``), the German stopword
+Components: regex tokenizer ``tokenize_de`` (shared with the standard BM25 run ``scripts/run_bm25.py``), the German stopword
 list of ``stopwordsiso`` (pip, version pinned via ``importlib.metadata``, 620 entries), and the Snowball German
 stemmer of ``snowballstemmer`` (the reference implementation used by nltk's ``SnowballStemmer('german')``).
 Compound splitting is intentionally omitted: no reviewed decompounding library is available offline/via pip
@@ -16,6 +16,11 @@ import snowballstemmer
 import stopwordsiso
 
 TOKEN_PATTERN = re.compile(r"[0-9A-Za-zÄÖÜäöüß]+")
+
+
+def tokenize_de(text: str | None) -> list[str]:
+    """Lowercase ``text`` and split it into letter/digit tokens (umlauts and ß included); ``None`` counts as empty."""
+    return TOKEN_PATTERN.findall((text or "").lower())
 
 
 @lru_cache(maxsize=1)
@@ -43,7 +48,7 @@ def preprocess_de(text: str | None, stopwords: bool = True, stem: bool = True) -
     Returns:
         List of terms in text order (duplicates kept for term-frequency weighting).
     """
-    toks = TOKEN_PATTERN.findall((text or "").lower())
+    toks = tokenize_de(text)
     if stopwords:
         sw = german_stopwords()
         toks = [t for t in toks if t not in sw]

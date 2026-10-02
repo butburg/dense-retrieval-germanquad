@@ -6,7 +6,7 @@ import numpy as np
 
 CODE = Path(__file__).resolve().parents[1] / "code"
 sys.path.insert(0, str(CODE)); sys.path.insert(0, str(CODE / "pylib"))
-from significance import cluster_sign_flip, holm, make_clusters, mcnemar_exact  # noqa: E402
+from significance import cluster_sign_flip, holm, make_clusters  # noqa: E402
 import compare_models as cm  # noqa: E402
 
 
@@ -31,9 +31,7 @@ def test_monte_carlo_deterministic_and_floor():
     assert r1 == r2 and r1["method"] == "monte_carlo" and r1["mc_floor"] and abs(r1["p"] - 1 / 20_001) < 1e-12
 
 
-def test_mcnemar_and_holm():
-    m = mcnemar_exact(np.array([1, 1, 0, 0, 1.0]), np.array([0, 1, 1, 1, 1.0]))
-    assert (m["b"], m["c"], m["b_plus_c"]) == (1, 2, 3) and m["p"] == 1.0
+def test_holm():
     assert np.allclose(holm([0.01, 0.04, 0.03]), [0.03, 0.06, 0.06])
     assert np.allclose(holm([0.01], family_size=6), [0.06])
 
@@ -49,5 +47,21 @@ def test_compare_mini_fixture():
     assert r["n_nonzero_clusters"] == 4 and r["p_method"] == "exact" and r["not_informative"]
     assert r["p_holm"] >= r["p_cluster_signflip"] and r["diff_b_minus_a"] > 0
     s1 = next(x for x in res["tests"] if x["metric"] == "Success@1" and x["b"] == "bge-m3")
-    assert (s1["mcnemar_b_a_only"], s1["mcnemar_c_b_only"]) == (0, 5)
+    assert abs(s1["diff_b_minus_a"] - 5 / 6) < 1e-12
     assert any(x["family"].startswith("explorative: embedder pairs") for x in res["tests"])
+
+
+def test_compare_all_families_one_run():
+    """Six confirmatory models, BM25-de and three extension models: 22 families, 103 tests."""
+    rng = np.random.default_rng(0)
+    n = 60
+    clusters = [f"c{i % 20}" for i in range(n)]
+    base = rng.integers(3, 8, n)
+    ranks = {"bm25": base, "bm25_de": base + 1}
+    for i, m in enumerate(cm.EMBEDDERS + cm.EXTENSION):
+        ranks[m] = np.maximum(1, base - i % 3)
+    res = cm.compare(ranks, clusters, b_perm=500, b_boot=50)
+    fams = {r["family"] for r in res["tests"]}
+    assert len(res["tests"]) == 103 and len(fams) == 22
+    r = next(t for t in res["tests"] if t["b"] == "jina-v2-base-de" and t["a"] == "bge-m3" and t["metric"] == "MRR@10")
+    assert r["diff_b_minus_a"] > 0 and "p_holm" in r  # jina-v2-base-de ranks the gold passage higher

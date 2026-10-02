@@ -1,0 +1,32 @@
+{
+  "experiment": {
+    "backend": "sentence-transformers",
+    "model_name": "BAAI/bge-m3",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 16,
+    "model_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+    "trust_remote_code": false,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 8192,
+    "model_revision_hub_head": "5617a9f61b028005a4858fdac845db406aefb181"
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-10-01T17:16:44.653759+00:00",
+    "encode_seconds": 951.8,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

@@ -17,6 +17,20 @@ from typing import Any, Dict, Iterable, List, Tuple
 JSONL_SPLIT_THRESHOLD = 57_000
 
 
+def doc_text(doc: Dict[str, Any]) -> str:
+    """Compose the indexed text of a normalized document.
+
+    Args:
+        doc: Normalized document with optional ``title`` and ``text`` fields.
+
+    Returns:
+        ``title``, a newline and ``text`` if both are non-empty after stripping,
+        otherwise whichever of the two exists (empty string if neither).
+    """
+    title, text = str(doc.get("title") or "").strip(), str(doc.get("text") or "").strip()
+    return f"{title}\n{text}" if title and text else title or text
+
+
 def load_jsonl(path: Path) -> List[Dict[str, Any]]:
     """Load a UTF-8 JSONL file into a list of dictionaries.
 

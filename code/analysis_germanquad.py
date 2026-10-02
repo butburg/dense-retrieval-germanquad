@@ -1,11 +1,11 @@
-"""Per-query analysis, paired significance tests and figure for BM25 vs. multilingual-e5-large (GermanQuAD pilot).
+"""Paired significance tests and figure for BM25 vs. multilingual-e5-large (GermanQuAD pilot).
 
-Ranking logic follows repro_germanquad.py (BM25Okapi and E5 top-10). Embeddings are not stored;
-an optional top-10 cache lives outside the repo (env RANK_CACHE). Writes only to code/output/analysis/.
-Mode --from-csv: reads per_query_germanquad.csv (no re-ranking, no E5 encoding, CSV untouched; figure is redrawn).
+Reads the per-query first-gold ranks from output/analysis/per_query_germanquad.csv (produced by the
+ranking in repro_germanquad.py; the CSV is left untouched) and writes significance_germanquad.json,
+SUMMARY.md and the figure to code/output/analysis/.
 """
 from __future__ import annotations
-import json, os, re, sys
+import json, sys
 from importlib.metadata import version as pv
 from pathlib import Path
 import numpy as np, pandas as pd
@@ -17,68 +17,10 @@ from local_dataset_io import load_jsonl  # noqa: E402
 
 D, OUT = CODE / "output" / "germanquad", CODE / "output" / "analysis"
 OUT.mkdir(parents=True, exist_ok=True)
-FROM_CSV = "--from-csv" in sys.argv
 SEED, B_PERM, B_BOOT, KS = 42, 100_000, 10_000, [1, 5, 10]
-queries, docs, qrels = (load_jsonl(D / f"{n}.normalized.jsonl") for n in ("queries", "docs", "qrels"))
-docs_by_id = {str(d["doc_id"]): d for d in docs}
-doc_ids = list(docs_by_id)
-gold: dict[str, set[str]] = {}
-for r in qrels:
-    if int(r["relevance"]) >= 1 and str(r["doc_id"]) in docs_by_id:
-        gold.setdefault(str(r["query_id"]), set()).add(str(r["doc_id"]))
-qids = [str(q["query_id"]) for q in queries]
-
-
-def rank_bm25() -> list[list[str]]:
-    from rank_bm25 import BM25Okapi
-    pat = re.compile(r"[0-9A-Za-zÄÖÜäöüß]+")
-    tok = lambda t: pat.findall((t or "").lower())  # noqa: E731
-
-    def comp(d):
-        t, x = str(d.get("title") or "").strip(), str(d.get("text") or "").strip()
-        return f"{t}\n{x}" if t and x else t or x
-    bm = BM25Okapi([tok(comp(docs_by_id[i])) for i in doc_ids], k1=1.5, b=0.75, epsilon=0.25)
-    return [[d for d, _ in sorted(zip(doc_ids, bm.get_scores(tok(str(q["query_text"])))),
-             key=lambda x: (-float(x[1]), x[0]))[:10]] for q in queries]
-
-
-def rank_e5() -> list[list[str]]:
-    from sentence_transformers import SentenceTransformer
-    m = SentenceTransformer("intfloat/multilingual-e5-large")
-    enc = dict(batch_size=32, show_progress_bar=False, normalize_embeddings=True, convert_to_tensor=True)
-    de = m.encode([f"passage: {str(docs_by_id[i].get('text') or '').strip()}" for i in doc_ids], **enc)
-    qe = m.encode([f"query: {str(q['query_text']).strip()}" for q in queries], **enc)
-    _, idx = (qe @ de.T).topk(k=10, dim=1)
-    return [[doc_ids[int(i)] for i in row] for row in idx.tolist()]
-
-
-cache = Path(os.environ["RANK_CACHE"]) if os.environ.get("RANK_CACHE") else None
-if FROM_CSV:
-    ranked = None
-elif cache and cache.exists():
-    ranked = json.loads(cache.read_text())
-else:
-    ranked = {"bm25": rank_bm25(), "e5": rank_e5()}
-    if cache:
-        cache.write_text(json.dumps(ranked))
-
-
-def first_rank(top: list[str], g: set[str]) -> int | None:
-    return next((i for i, d in enumerate(top, 1) if d in g), None)
-
-
-rows = []
-for i, qid in enumerate([] if FROM_CSV else qids):
-    g = gold.get(qid, set())
-    rb, re_ = (first_rank(ranked[m][i], g) for m in ("bm25", "e5"))
-    rows.append({"query_id": qid, "gold_doc_id": ";".join(sorted(g)),
-                 "rank_bm25": rb if rb else "none", "rank_e5": re_ if re_ else "none"})
-if FROM_CSV:
-    df = pd.read_csv(OUT / "per_query_germanquad.csv", dtype=str, keep_default_na=False)
-    assert df["query_id"].tolist() == qids, "CSV query order differs from queries.normalized.jsonl"
-else:
-    df = pd.DataFrame(rows)
-    df.to_csv(OUT / "per_query_germanquad.csv", index=False)
+qids = [str(q["query_id"]) for q in load_jsonl(D / "queries.normalized.jsonl")]
+df = pd.read_csv(OUT / "per_query_germanquad.csv", dtype=str, keep_default_na=False)
+assert df["query_id"].tolist() == qids, "CSV query order differs from queries.normalized.jsonl"
 
 
 def arr(col):
@@ -113,9 +55,7 @@ def boot_ci(d: np.ndarray, rng) -> tuple[list, list]:
     q = np.percentile(d[idx].mean(1), [2.5, 97.5])
     csum = np.bincount(cinv, weights=d, minlength=ncl)
     w = rng.multinomial(ncl, np.full(ncl, 1 / ncl), size=B_BOOT)  # resample clusters with replacement
-    # Ratio estimator: sum of d over the resampled clusters divided by the number of resampled queries
-    # (sum of cluster sizes), i.e. the query-weighted mean of d, not the unweighted mean of cluster means.
-    # Resampled query counts vary per replicate, hence the denominator w @ csize.
+    # ratio estimator: query-weighted mean of d over the resampled clusters
     c = np.percentile((w @ csum) / (w @ csize), [2.5, 97.5])
     return [float(x) for x in q], [float(x) for x in c]
 
@@ -198,7 +138,7 @@ meta = {"status": "Explorativer Pilot; Auswerteprotokoll noch nicht vom Menschen
         "query_level_note": "query-level p-values are optimistic (ignore clustering of queries by gold doc)",
         "mc_floor_note": "Monte-Carlo p-values equal to 1/(B+1) are upper bounds (<= 1/(B+1)); McNemar p-values are exact",
         "cluster_size_distribution": cluster_sizes,
-        "mode": "from_csv" if FROM_CSV else "full",
+        "mode": "from_csv",
         "packages": {p: pv(p) for p in ("numpy", "scipy", "pandas", "matplotlib", "rank-bm25", "sentence-transformers")},
         "consistency_with_repro_all_exact": bool(ok)}
 (OUT / "significance_germanquad.json").write_text(json.dumps({"meta": meta, "tests": tests}, indent=2))

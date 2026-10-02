@@ -1,0 +1,35 @@
+{
+  "experiment": {
+    "backend": "sentence-transformers",
+    "model_name": "jinaai/jina-embeddings-v2-base-de",
+    "query_prefix": "",
+    "doc_prefix": "",
+    "normalize": true,
+    "batch_size": 8,
+    "model_revision": "3f9eede875721714945b6a99a3198299243cf2be",
+    "trust_remote_code": true,
+    "query_task": null,
+    "doc_task": null,
+    "python": "3.11.15",
+    "sentence_transformers": "5.7.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.3",
+    "device": "cpu",
+    "max_seq_length_config": null,
+    "max_seq_length_effective": 8192,
+    "code_repo": "jinaai/jina-bert-implementation",
+    "code_revision_pinned": "f3ec4cf7de7e561007f27c9efc7148b0bd713f81",
+    "code_revision_loaded": "f3ec4cf7de7e561007f27c9efc7148b0bd713f81",
+    "model_revision_hub_head": "3f9eede875721714945b6a99a3198299243cf2be"
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "numpy": "2.4.6",
+    "cpu_count": 4,
+    "timestamp_utc": "2026-10-01T16:44:24.225348+00:00",
+    "encode_seconds": 704.1,
+    "cache_hit_docs": false,
+    "cache_hit_queries": false
+  }
+}

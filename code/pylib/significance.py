@@ -1,13 +1,12 @@
 """Paired significance tools following docs/evaluation_protocol.md (cluster level).
 
 Same estimators as the pilot script ``analysis_germanquad.py`` (cluster sign-flip with one sign per
-gold-document cluster, ratio-estimator cluster bootstrap, exact McNemar, Holm), factored into functions.
+gold-document cluster, ratio-estimator cluster bootstrap, Holm), factored into functions.
 Every call creates its own ``numpy.random.default_rng(seed)`` so results do not depend on call order.
 """
 from __future__ import annotations
 
 import numpy as np
-from scipy.stats import binomtest
 
 SEED, B_PERM, B_BOOT, EXACT_MAX_N = 42, 100_000, 10_000, 16
 TOL = 1e-9  # cluster sums with |x| <= TOL count as zero (float noise of rank differences)
@@ -65,18 +64,6 @@ def cluster_bootstrap_ci(d: np.ndarray, cinv: np.ndarray, ncl: int, sizes: np.nd
     w = rng.multinomial(ncl, np.full(ncl, 1 / ncl), size=b)
     est = (w @ cluster_sums(d, cinv, ncl)) / (w @ sizes)
     return [float(x) for x in np.percentile(est, [2.5, 97.5])]
-
-
-def mcnemar_exact(a: np.ndarray, b_: np.ndarray) -> dict:
-    """Exact two-sided McNemar test on binary success vectors (descriptive; ignores clusters).
-
-    Returns:
-        Dict with ``b`` (only ``a`` succeeds), ``c`` (only ``b_`` succeeds), ``b_plus_c`` and ``p``.
-    """
-    b = int(((a == 1) & (b_ == 0)).sum())
-    c = int(((a == 0) & (b_ == 1)).sum())
-    p = float(binomtest(min(b, c), b + c, 0.5).pvalue) if b + c else 1.0
-    return {"b": b, "c": c, "b_plus_c": b + c, "p": p}
 
 
 def holm(ps: list[float], family_size: int | None = None) -> list[float]:
