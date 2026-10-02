@@ -1,4 +1,4 @@
-# Dense Retrieval mit neun Embedding-Modellen im Vergleich zu BM25 auf GermanQuAD
+# Retrieval-Qualität von neun Embedding-Modellen auf dem deutschsprachigen Datensatz GermanQuAD mit BM25-Referenzen
 
 Dieses Repository enthält Code, Notebooks, Tests und Ergebnisdateien eines Retrieval-Experiments auf dem deutschsprachigen Datensatz GermanQuAD. Verglichen werden neun Embedding-Modelle (multilingual-e5-large, bge-m3, gte-multilingual-base, jina-embeddings-v3, text-embedding-3-small, text-embedding-3-large, Qwen3-Embedding-0.6B, snowflake-arctic-embed-l-v2.0 und jina-embeddings-v2-base-de) mit einer BM25-Baseline und BM25-de (BM25 mit deutscher Vorverarbeitung) im Retrieval-only-Setting auf dem GermanQuAD-Testsplit (Cosine-Ähnlichkeit, k = 1, 5, 10, Primärmetrik MRR@10, Seed 42). `compare_models.py` rechnet in einem Lauf 55 gepaarte Tests auf MRR@10 in vier Familien (Holm je Familie, Familiengröße = Testzahl): alle 36 Modellpaare, je Modell gegen BM25 (9), je Modell gegen BM25-de (9) und BM25-de gegen BM25 (1). Success@k und MRR@k werden nur deskriptiv berichtet.
 

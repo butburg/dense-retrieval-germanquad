@@ -139,6 +139,8 @@ meta = {"status": "Explorativer Pilot; Auswerteprotokoll noch nicht vom Menschen
         "mc_floor_note": "Monte-Carlo p-values equal to 1/(B+1) are upper bounds (<= 1/(B+1)); McNemar p-values are exact",
         "cluster_size_distribution": cluster_sizes,
         "mode": "from_csv",
+        # Hinweis: "packages" beschreibt die Umgebung dieser Analyse, nicht die des Encodings
+        # (Encoding-Versionen: output/harness/*/encode_germanquad.json, Feld experiment.*).
         "packages": {p: pv(p) for p in ("numpy", "scipy", "pandas", "matplotlib", "rank-bm25", "sentence-transformers")},
         "consistency_with_repro_all_exact": bool(ok)}
 (OUT / "significance_germanquad.json").write_text(json.dumps({"meta": meta, "tests": tests}, indent=2))
