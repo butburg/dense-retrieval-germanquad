@@ -9,8 +9,8 @@ Dieses Dokument hält die vom Menschen freigegebenen Festlegungen für den Haupt
 - GerLeRB wird nicht ausgewertet. Parser-Audit und BM25-Lauf (`code/output/bm25_v2/`) bleiben als Vorarbeit im Repo, fließen aber nicht in die Arbeit ein.
 
 ## Retriever
-- Baseline: BM25 gemäß dem BM25-Protokoll (Konfiguration in `code/output/bm25_v2/bm25_results.json`).
-- Embedder (Dense Retrieval, Dokumentebene, Cosine): intfloat/multilingual-e5-large, BAAI/bge-m3, Alibaba-NLP/gte-multilingual-base, jinaai/jina-embeddings-v3, OpenAI text-embedding-3-small, OpenAI text-embedding-3-large. Modellspezifische Präfixe/Adapter gemäß Modellkarte, dokumentiert in `code/pylib/embedders.py`.
+- Baselines: BM25 gemäß dem BM25-Protokoll (Konfiguration in `code/output/bm25_v2/bm25_results.json`); seit 30.09. zusätzlich BM25-de (Stoppwörter stopwordsiso, Snowball-Stemmer).
+- Embedder (Dense Retrieval, Dokumentebene, Cosine): intfloat/multilingual-e5-large, BAAI/bge-m3, Alibaba-NLP/gte-multilingual-base, jinaai/jina-embeddings-v3, OpenAI text-embedding-3-small, OpenAI text-embedding-3-large; seit 30.09. zusätzlich Qwen/Qwen3-Embedding-0.6B, Snowflake/snowflake-arctic-embed-l-v2.0, jinaai/jina-embeddings-v2-base-de (E28). Seit 02.10. werden alle neun Modelle gleich behandelt (Abschnitt „Änderung 02.10.2026“). Modellspezifische Präfixe/Adapter gemäß Modellkarte, dokumentiert in `code/pylib/embedders.py`.
 
 ## Metriken
 - Recall@k, Success@k, MRR@k, Precision@k für k = 1, 5, 10.
@@ -20,7 +20,7 @@ Dieses Dokument hält die vom Menschen freigegebenen Festlegungen für den Haupt
 - Primärer p-Wert: gepaarter Vorzeichenwechsel-Randomisierungstest auf **Cluster-Ebene** (Cluster = Gold-Passage der Frage), zweiseitig, B = 100.000, fester Seed, p = (Treffer + 1)/(B + 1).
 - Success@k: exakter McNemar-Test (b, c) nur ergänzend/deskriptiv, ausdrücklich als „optimistisch, ignoriert Cluster“ gekennzeichnet.
 - Effektgröße: Differenz der Mittelwerte mit 95-%-Cluster-Bootstrap-CI (B = 10.000, fester Seed).
-- Mehrfachvergleiche: Holm, alpha = 0,05. Konfirmatorische Familie: jeder Embedder gegen BM25 auf der Primärmetrik (6 Tests). Vergleiche der Embedder untereinander und sekundäre Metriken: explorativ, eigene Kennzeichnung.
+- Mehrfachvergleiche: Holm, alpha = 0,05. ~~Konfirmatorische Familie: jeder Embedder gegen BM25 auf der Primärmetrik (6 Tests). Vergleiche der Embedder untereinander und sekundäre Metriken: explorativ, eigene Kennzeichnung.~~ Am 02.10.2026 ersetzt durch das Design im Abschnitt „Änderung 02.10.2026“ (keine konfirmatorische Familie mehr).
 - Deckeneffekt: Die Schwelle für „nicht aussagekräftig“ (Anzahl diskordanter Paare bzw. Cluster mit Differenz ≠ 0) legt der Student **vor** den Hauptläufen fest, begründet sie in Kapitel 3 und trägt den Wert hier ein; Examiner prüft. Methodische Detailfestlegungen dieser Art prüft und begründet der Student in der Arbeit selbst, sie brauchen keine gesonderte Freigabe des Menschen. Festgelegter Wert: siehe Abschnitt „Detailfestlegungen des Students“.
 
 ## Berichtsregeln
@@ -56,4 +56,14 @@ Die freigegebenen Festlegungen oben bleiben unverändert; dieser Abschnitt konkr
 - Befund: 143 von 474 Passagen haben mehr als 512 Tokens (gezählt mit dem bge-m3-Tokenizer; Median 349, Maximum 2.652; `code/output/harness/VALIDATION.md`, Abschnitt 4). multilingual-e5-large kürzt auf 512 Tokens (Modellgrenze), bge-m3, gte-multilingual-base und jina-embeddings-v3 verarbeiten bis 8.192 Tokens, die OpenAI-Modelle laut Anbieterdokumentation bis 8.192 Tokens (OpenAI-Dokumentation, abgerufen 2026-09-29; Tabelle 1 in Kap. 3; Maximum der Passagen 2.652 Tokens nach bge-m3-Tokenizer, OpenAI-Tokenzahlen nicht gemessen). Längen unter anderen Tokenizern wurden nicht gemessen.
 - **Hauptanalyse (konfirmatorisch und explorativ wie oben): native maximale Eingabelänge je Modell** (Modellstandard, siehe Modellversionierung). Begründung: entspricht Modellkarten und praktischer Nutzung; eine künstliche Kürzung würde die Modelle mit längerem Kontext unter ihrem dokumentierten Einsatz evaluieren. Die e5-Grenze ist Eigenschaft des Modells und wird als solche berichtet.
 - **Sensitivitätsanalyse (ausschließlich explorativ):** bge-m3, gte-multilingual-base und jina-embeddings-v3 werden zusätzlich mit einheitlich `max_seq_length = 512` (nur Passagen betroffen) gerechnet; multilingual-e5-large ist bereits auf 512 begrenzt und wird nicht erneut gerechnet. OpenAI-Modelle entfallen (kein lokal steuerbarer Tokenizer-Parameter, zusätzliche API-Kosten). Berichtet werden MRR@10 und Success@k je Modell unter beiden Längen sowie deskriptiv die Differenz; optional Cluster-Bootstrap-CI der Differenz nativ vs. 512, gekennzeichnet als explorativ, ohne Holm-Korrektur.
-- Die konfirmatorische Familie (6 Tests, MRR@10, Holm) bleibt unverändert und nutzt ausschließlich die Läufe mit nativer Länge. Ergebnisse der Sensitivitätsanalyse ändern keine konfirmatorische Aussage; sie dienen nur der Einordnung, ob Unterschiede zu e5-large mit der Kürzung zusammenhängen können (Diskussion, Abschnitt 5.3).
+- Die konfirmatorische Familie (6 Tests, MRR@10, Holm) bleibt unverändert und nutzt ausschließlich die Läufe mit nativer Länge. Ergebnisse der Sensitivitätsanalyse ändern keine konfirmatorische Aussage; sie dienen nur der Einordnung, ob Unterschiede zu e5-large mit der Kürzung zusammenhängen können (Diskussion, Abschnitt 5.3). Seit 02.10.2026: Alle 55 Tests nutzen ausschließlich die Läufe mit nativer Länge; die konfirmatorische Familie entfällt.
+
+## Änderung 02.10.2026: Gleichbehandlung aller neun Modelle (E33)
+
+Geändert am 02.10.2026 auf Entscheidung des Menschen. Grund: Der Mensch will alle neun Embedding-Modelle gleich behandeln; die bisherige Trennung in sechs konfirmatorisch und drei explorativ geprüfte Modelle hing nur vom Zeitpunkt der Aufnahme ab. Die Pilotkenntnis (BM25, e5-large) und die Aufnahme von BM25-de und drei Modellen nach ersten Ergebnissen schränkten die konfirmatorische Lesart ohnehin ein. Die Familienbildung erfolgte in Kenntnis der Ergebnisse (offengelegt in Abschnitt 5.3 der Arbeit).
+
+- Retriever: neun Embedding-Modelle gleichrangig; BM25 und BM25-de sind Baselines.
+- Getestet wird nur die Primärmetrik MRR@10 (Cluster-Randomisierungstest und Cluster-Bootstrap wie oben). Success@k und MRR@5 werden nur deskriptiv berichtet.
+- Testfamilien mit Holm je Familie (Familiengröße = Testzahl): F1 alle 36 Paare der neun Modelle; F2 neun Modelle gegen BM25; F3 neun Modelle gegen BM25-de; F4 BM25-de gegen BM25 (ein Test, unkorrigiert). Zusammen 55 Tests, alle explorativ. Keine Korrektur über Familien hinweg.
+- Entfallen: konfirmatorische Familie (6 Tests), Familien zu Success@k, bge-m3 als Referenz für einzelne Modelle, Robustheitsrechnung `robustness_holm_nine.json` als Tabelle der Arbeit.
+- Ergebnisdateien: `code/output/harness/comparison_germanquad.json`, `code/output/harness/results/table_significance.md`.
