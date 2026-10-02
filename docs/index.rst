@@ -1,5 +1,5 @@
-deeplearningSearch
-===================
+dense-retrieval-germanquad
+==========================
 
 .. toctree::
    :maxdepth: 2

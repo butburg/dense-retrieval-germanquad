@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../code"))
 
-project = "deeplearningSearch"
+project = "dense-retrieval-germanquad"
 
 extensions = [
     "sphinx.ext.autodoc",
