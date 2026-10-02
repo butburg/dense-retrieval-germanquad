@@ -7,10 +7,10 @@ Dieses Repository enthält Code, Notebooks, Tests und Ergebnisdateien eines Retr
 | Pfad | Inhalt |
 |---|---|
 | `code/` | Notebooks 01 bis 05, Harness-Skripte (`embed_eval.py`, `compare_models.py`, `make_results.py`, `token_lengths.py`), BM25 (`scripts/run_bm25.py`, `bm25_german.py`), Demo (`demo_query.py`), wiederverwendbare Logik in `code/pylib/`; Details in `code/README.md` |
-| `code/output/harness/` | Ergebnisdateien der neun Modelle: Metriken und Per-Query-Ränge je Modell, alle Tests in `comparison_germanquad.json`, Tabellen und Abbildungen (`results/`), `VALIDATION.md` |
+| `code/output/harness/` | Ergebnisdateien der neun Modelle: Metriken und Per-Query-Ränge je Modell, alle Tests in `comparison_germanquad.json`, Tabellen und Abbildungen (`results/`) |
 | `code/output/bm25_de/` | BM25-de (Stoppwörter, Snowball-Stemming): Metriken und Per-Query-Ränge |
 | `code/output/germanquad/`, `code/output/bm25_v2/` | Normalisierte GermanQuAD-Daten (Queries, Passagen, Qrels) und BM25-Ergebnisse |
-| `code/output/analysis/`, `code/output/repro/`, `code/output/bm25/`, `code/output/dense_e5/` | Pilotanalyse und Reproduktionsläufe (BM25, multilingual-e5-large) |
+| `code/output/bm25/`, `code/output/dense_e5/` | Pilotwerte (BM25, multilingual-e5-large) |
 | `tests/` | pytest-Tests für Metriken, Signifikanztests, Embedder-Registry, Cache, Datensatz-I/O, Ergebnistabellen und Demo |
 | `docs/` | Sphinx-API-Dokumentation von `code/pylib/` und das Evaluationsprotokoll (`docs/evaluation_protocol.md`) |
 
@@ -25,7 +25,7 @@ pip install -r code/requirements-embed.txt                                  # St
 pip install -r requirements.txt                                             # Notebook- und Sphinx-Umgebung
 ```
 
-Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face-Hub (gepinnte Revisionen, siehe `code/output/harness/VALIDATION.md`). Die OpenAI-Modelle benötigen den Schlüssel in der Umgebungsvariable `EMBED_OPENAI_API_KEY`.
+Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face-Hub (gepinnte Revisionen, gespeichert in `code/output/harness/<Modell>/metrics_germanquad.json`). Die OpenAI-Modelle benötigen den Schlüssel in der Umgebungsvariable `EMBED_OPENAI_API_KEY`.
 
 ## Reproduktion über Notebook 05
 
@@ -63,7 +63,7 @@ Tests, die Modellgewichte oder den Embedding-Cache benötigen, werden ohne diese
 
 ## Ergebnisse
 
-Die maßgeblichen Zahlen stehen in `code/output/harness/results/table_main.md` (alle Retriever), `table_significance.md` (alle Tests) und `table_len512.md` (Sensitivität); die Grundlage bilden `code/output/harness/<Modell>/metrics_germanquad.json` und `comparison_germanquad.json`; die Zuordnung der Tabellen zu den Dateien steht in `code/README.md`. Die Validierung der Läufe (Stack, Revisionen, Konsistenzprüfungen) steht in `code/output/harness/VALIDATION.md`.
+Die maßgeblichen Zahlen stehen in `code/output/harness/results/table_main.md` (alle Retriever), `table_significance.md` (alle Tests) und `table_len512.md` (Sensitivität); die Grundlage bilden `code/output/harness/<Modell>/metrics_germanquad.json` und `comparison_germanquad.json`; die Zuordnung der Tabellen zu den Dateien steht in `code/README.md`.
 
 ## Sphinx-Dokumentation
 

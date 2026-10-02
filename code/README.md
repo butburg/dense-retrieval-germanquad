@@ -14,7 +14,7 @@ Zweck: Die Quelldaten werden lokal reproduzierbar eingelesen, geparst und in Rol
 
 `04_dense_retrieval_poc.ipynb` führt denselben Retrieval-only-Ablauf für `intfloat/multilingual-e5-large` auf `GermanQuAD` aus (Ausgabe: `code/output/dense_e5/`).
 
-Pilotwerte (BM25 und e5-large, Pilotanalyse in `code/output/analysis/`): Sie dienten der Prüfung der Pipeline; die maßgeblichen Zahlen liefert das Hauptexperiment. Reproduktion der Pilotwerte: `repro_germanquad.py` und `repro_compare.py`, Dokumentation in `code/output/repro/REPRO.md`.
+Die Pilotwerte (BM25 und e5-large) dienten der Prüfung der Pipeline; die maßgeblichen Zahlen liefert das Hauptexperiment.
 
 ## Teil 2: Hauptexperiment (05 und Harness-Skripte)
 
@@ -30,7 +30,7 @@ Harness-Skripte:
 - `make_results.py`: Tabellen, Abbildung 1, Paarmatrix der MRR@10-Differenzen (`fig_pair_matrix.png`, ohne Tests) und Ablaufschema der Tests (`fig_test_flow.png`) nach `output/harness/results/`.
 - `token_lengths.py`: Tokenlängen der Passagen nach `output/harness/token_lengths.json`.
 
-Ausgaben unter `output/harness/`: `<model>/metrics_germanquad.json` und `per_query_germanquad.csv` je Modell, `comparison_germanquad.json`, `results/` (`table_main`, `table_significance`, `table_len512`, `fig_mrr10_ci`, `fig_pair_matrix`, `fig_test_flow`), `token_lengths.json`, `VALIDATION.md` (Validierung, Stack, Revisionen). Der Embedding-Cache `output/harness/cache/` ist git-ignoriert.
+Ausgaben unter `output/harness/`: `<model>/metrics_germanquad.json` und `per_query_germanquad.csv` je Modell, `comparison_germanquad.json`, `results/` (`table_main`, `table_significance`, `table_len512`, `fig_mrr10_ci`, `fig_pair_matrix`, `fig_test_flow`), `token_lengths.json`. Der Embedding-Cache `output/harness/cache/` ist git-ignoriert.
 
 Reproduktion (im Ordner `code/`, Pakete aus `requirements-embed.txt`):
 
@@ -42,8 +42,6 @@ python scripts/run_bm25.py && python bm25_german.py    # BM25 und BM25-de
 python compare_models.py                                # alle 55 Tests
 python make_results.py
 ```
-
-Details zur Validierung: `output/harness/VALIDATION.md`.
 
 ## Ergebnisdateien je Tabelle
 
@@ -58,7 +56,7 @@ Die Tabellen und Abbildung 1 der schriftlichen Ausarbeitung stammen aus folgende
 | Abbildung 2 | Ablauf der gepaarten Tests | `code/output/harness/results/fig_test_flow.png` |
 | Abbildung D1 | MRR@10-Differenzen aller 55 Paare | `code/output/harness/results/fig_pair_matrix.png` |
 
-Per-Query-Ränge liegen als `per_query_germanquad.csv` in den Verzeichnissen der Durchläufe bzw. als `per_query_ranks.csv` unter `code/output/bm25_v2/` und `code/output/bm25_de/`. Tokenlängen der Passagen stehen in `code/output/harness/token_lengths.json`, Validierung und Reproduktion in `code/output/harness/VALIDATION.md` und `code/output/repro/REPRO.md`.
+Per-Query-Ränge liegen als `per_query_germanquad.csv` in den Verzeichnissen der Durchläufe bzw. als `per_query_ranks.csv` unter `code/output/bm25_v2/` und `code/output/bm25_de/`. Tokenlängen der Passagen stehen in `code/output/harness/token_lengths.json`, Versionen und Revisionen je Durchlauf in den `metrics_germanquad.json`.
 
 MTEB-Abgleich: Das Referenzergebnis `results/intfloat__multilingual-e5-large/ab10c1a7…/GermanQuAD-Retrieval.json` aus dem Repository embeddings-benchmark/results wird mit `code/output/harness/e5-large/metrics_germanquad.json` verglichen, entsprechend `results/Snowflake__snowflake-arctic-embed-l-v2.0/edc2df7b…/GermanQuAD-Retrieval.json` mit `code/output/harness/arctic-embed-l-v2/metrics_germanquad.json`. Die Datensatzrevision der MTEB-Aufgabe ist `f5c87ae5`, die eigene `9af36714`.
 
@@ -96,7 +94,7 @@ Der Harness bewertet Dense-Retriever auf jedem normalisierten Datensatz (Retriev
 
 - Eingabe: `--dataset-dir` mit `{docs,queries,qrels}.normalized.jsonl`, `--model <key>` aus der Registry `pylib/embedders.py` (`e5-large`, `bge-m3`, `gte-multilingual-base`, `jina-v3`, `openai-3-small`, `openai-3-large`, `qwen3-embedding-0.6b`, `arctic-embed-l-v2`, `jina-v2-base-de`; Backend sentence-transformers oder OpenAI mit Key aus `EMBED_OPENAI_API_KEY`), optional `--max-seq-length`, `--out-dir` (Default `output/harness`).
 - Verarbeitung: Präfixe, Tasks und Normalisierung je Modellkonfiguration, Embeddings als `.npy` gecacht, Ranking und Metriken aus `pylib/retrieval_metrics.py`.
-- Ausgabe: `output/harness/<run_name>/metrics_<dataset>.json` (Metriken, Konfiguration, Versionen), `per_query_<dataset>.csv` (Rang des ersten relevanten Docs), Cache in `output/harness/cache/` (git-ignoriert). Validierung: `output/harness/VALIDATION.md`.
+- Ausgabe: `output/harness/<run_name>/metrics_<dataset>.json` (Metriken, Konfiguration, Versionen), `per_query_<dataset>.csv` (Rang des ersten relevanten Docs), Cache in `output/harness/cache/` (git-ignoriert).
 
 ## Demo-Skript (`demo_query.py`)
 
