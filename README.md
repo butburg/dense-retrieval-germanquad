@@ -71,7 +71,7 @@ Die maßgeblichen Zahlen stehen in `code/output/harness/results/table_main.md` (
 sphinx-build -b html docs docs/_build/html
 ```
 
-Der Build liest die Docstrings aus `code/pylib/` und schreibt die API-Dokumentation nach `docs/_build/html/`. Die fertig gerenderte Fassung liegt unter `docs/html/index.html` und lässt sich ohne eigenen Build öffnen; zum Neubauen dient der Befehl oben (Voraussetzung: `pip install sphinx myst-parser`).
+Der Build liest die Docstrings aus `code/pylib/` und schreibt die API-Dokumentation nach `docs/_build/html/`. Die fertig gerenderte Fassung liegt unter `docs/html/index.html` und lässt sich ohne eigenen Build öffnen, online unter https://butburg.github.io/dense-retrieval-germanquad/ (GitHub Pages aus `main`, Ordner `/docs`); zum Neubauen dient der Befehl oben (Voraussetzung: `pip install sphinx myst-parser`).
 
 ## Repository aktualisieren
 
