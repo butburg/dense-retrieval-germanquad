@@ -1,4 +1,4 @@
-"""Live-Demo: Top-k von BM25, BM25-de und einem offenen Embedding-Modell nebeneinander (nur CPU, kein API-Key).
+"""Live-Demo: Top-k von BM25, BM25-de und einem Open-Weight-Embedding-Modell nebeneinander (nur CPU, kein API-Key).
 
 Nutzung (im Ordner code/):
   python demo_query.py --query-id q40321                       # drei Spalten BM25 | BM25-de | bge-m3, k = 3
@@ -256,7 +256,7 @@ def main() -> None:
     # --- Parse and validate arguments ---
     from embedders import REGISTRY
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", default=DEFAULT_MODEL, help=f"offene Modelle: {', '.join(OPEN_MODELS)} (Default: %(default)s)")
+    ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Open-Weight-Modelle: {', '.join(OPEN_MODELS)} (Default: %(default)s)")
     g = ap.add_mutually_exclusive_group()  # g: either a free query or a dataset query ID
     g.add_argument("--query", help="freie Frage")
     g.add_argument("--query-id", help="Frage-ID aus queries.normalized.jsonl (markiert Gold-Passagen)")
