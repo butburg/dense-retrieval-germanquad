@@ -190,7 +190,7 @@ def draw_flow(path: Path) -> None:
         else:
             s_ = 1 if x1 > x0 else -1
             ax.annotate("", (x1 - s_ * w / 2, y1), (x0 + s_ * w / 2, y0), arrowprops=kw)
-    ax.text(0.15, -0.3, "Legende: Kasten = Arbeitsschritt, Pfeil = Reihenfolge. Familien (Holm je Familie): F1 Modellpaare (36 Tests),\n"
+    ax.text(0.15, -0.3, "Legende: Kasten = Arbeitsschritt. Familien (Holm je Familie): F1 Modellpaare (36 Tests),\n"
             "F2 Modell gegen BM25 (9), F3 Modell gegen BM25-de (9), F4 BM25-de gegen BM25 (1, ohne Korrektur); zusammen 55 Tests.",
             fontsize=11, va="center")
     fig.savefig(path, dpi=200, bbox_inches="tight")
