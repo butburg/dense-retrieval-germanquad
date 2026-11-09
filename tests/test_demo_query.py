@@ -129,3 +129,56 @@ def test_snippet_lines_are_short_and_indented(data):
     lines = dq.snippet_lines(doc, 50)
     assert 1 <= len(lines) <= dq.SNIPPET_LINES and all(len(line) <= 50 for line in lines)
     assert all(line.startswith("   ") for line in lines)
+
+
+# --- Target passage (--target-id) ---
+def test_show_target_rank_footer_and_marks(data, capsys):
+    dq = data[0]
+    docs_by_id = {f"c{i}": {"doc_id": f"c{i}", "title": f"Titel{i}", "text": "wort " * 60} for i in (1, 2, 3, 4)}
+    rankings = [("BM25", [("c1", 3.0), ("c2", 2.0), ("c3", 1.0), ("c4", 0.5)]),
+                ("BM25-de", [("c2", 4.0), ("c1", 2.0), ("c3", 1.0), ("c4", 0.5)]),
+                ("bge-m3", [("c4", 0.9), ("c3", 0.8), ("c2", 0.7), ("c1", 0.1)])]
+    dq.show("Testfrage?", rankings, docs_by_id, set(), 3, 170, "c3")
+    lines = capsys.readouterr().out.splitlines()
+    rank_line = next(line for line in lines if line.startswith("Ziel-Rang"))
+    assert [part.strip() for part in rank_line.split(" | ")] == [
+        "Ziel-Rang: 3 (volle Rangliste)", "Ziel-Rang: 3 (volle Rangliste)", "Ziel-Rang: 2 (volle Rangliste)"]
+    assert "Ziel-Passage: c3  Titel3" in lines
+    assert sum(line.count("[ZIEL]") for line in lines if "Score" in line) == 3  # c3 in every top 3
+    assert not any("Gold-Rang" in line for line in lines)  # free text: no gold footer
+
+
+def test_show_without_target_has_no_target_output(data, capsys):
+    dq = data[0]
+    lines = _toy_view(dq, {"c1"}, 170, capsys)
+    assert not any("Ziel" in line for line in lines)
+
+
+def test_show_target_that_is_gold_gets_both_marks(data, capsys):
+    dq = data[0]
+    docs_by_id = {f"c{i}": {"doc_id": f"c{i}", "title": f"Titel{i}", "text": "wort " * 60} for i in (1, 2)}
+    dq.show("Testfrage?", [("BM25", [("c1", 2.0), ("c2", 1.0)])] * 3, docs_by_id, {"c1"}, 1, 170, "c1")
+    first_result = next(line for line in capsys.readouterr().out.splitlines() if "Score" in line)
+    assert "[GOLD]  [ZIEL]" in first_result
+
+
+def test_target_rank_equals_gold_rank_for_gold_target(data):
+    """Target = gold of a dataset query gives the gold rank, via the same rank function in column()."""
+    dq, docs_by_id, doc_ids, qtext, gold, _ = data
+    qid = "q40321"
+    target = sorted(gold[qid])[0]
+    bm25, tokenize = dq.build_bm25(doc_ids, docs_by_id, "BM25")
+    ranking = dq.bm25_ranking(bm25, tokenize, doc_ids, qtext[qid])
+    lines = dq.column("BM25", ranking, docs_by_id, gold[qid], 3, 120, target)
+    gold_line = next(line for line in lines if line.startswith("Gold-Rang")).strip()
+    target_line = next(line for line in lines if line.startswith("Ziel-Rang")).strip()
+    assert gold_line.split(": ")[1] == target_line.split(": ")[1]
+    assert f"Gold-Rang: {best_gold_rank(ranking, gold[qid])} " in gold_line
+
+
+def test_unknown_target_id_is_rejected_with_clear_message():
+    import subprocess
+    result = subprocess.run([sys.executable, str(CODE / "demo_query.py"), "--query", "Testfrage?",
+                             "--target-id", "c_gibt_es_nicht"], capture_output=True, text=True, timeout=300)
+    assert result.returncode == 1
+    assert "Ziel-ID 'c_gibt_es_nicht' nicht in" in result.stderr

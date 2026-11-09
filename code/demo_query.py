@@ -3,6 +3,8 @@
 Nutzung (im Ordner code/):
   python demo_query.py --query-id q40321                       # drei Spalten BM25 | BM25-de | bge-m3, k = 3
   python demo_query.py --query "Wer entwickelte den seillosen Aufzug?" --model e5-large --k 5
+  python demo_query.py --query "Wie lange hält eine Glühbirne?" --target-id c41186 --width 170
+                                                               # Rang der gewählten Passage c41186 je Verfahren
   python demo_query.py --warm-cache                            # Dokumentvektoren einmalig berechnen und cachen
 Eingaben: {docs,queries,qrels}.normalized.jsonl in --dataset-dir (Default output/germanquad).
 Ausgaben: Terminal; geschrieben wird nur der Embedding-Cache output/harness/cache/.
@@ -13,7 +15,10 @@ Role in the experiment: presentation tool, independent of the evaluation. It sho
 ID, or free text) the top-k passages of three retrievers in three columns: BM25 (regex tokenization), BM25-de (same index
 parameters, stopword removal and Snowball stemming of pylib/german_text.py) and one open embedding model. Gold passages
 are marked (only for ``--query-id``) and the gold rank of each retriever in its full ranking is printed below the
-columns. Both BM25 indexes are built by ``run_bm25.build_index``, the single definition shared with the experiment
+columns. With ``--target-id <doc_id>`` (combinable with ``--query`` and ``--query-id``) a chosen passage is marked
+``[ZIEL]`` when it is among the top k, and its rank in the full ranking of each retriever is printed below the columns
+("Ziel-Rang", computed by the same ``best_gold_rank`` as the gold rank) together with its title. If the target is also
+a gold passage of the query, a result line carries both marks (``[GOLD]  [ZIEL]``). Both BM25 indexes are built by ``run_bm25.build_index``, the single definition shared with the experiment
 scripts. Passage vectors are read from / written to the same cache as embed_eval.py (output/harness/cache/), so a run
 after ``embed_eval.py --stage encode`` needs no re-encoding. Only the single query is encoded at runtime. The imports of
 heavy modules are deferred into the functions so that ``--help`` and error messages work without them.
@@ -168,7 +173,8 @@ def snippet_lines(doc: dict, width: int, max_lines: int = SNIPPET_LINES) -> list
                          placeholder=" …")
 
 
-def column(name: str, ranking, docs_by_id: dict, gold: set[str], k: int, width: int) -> list[str]:
+def column(name: str, ranking, docs_by_id: dict, gold: set[str], k: int, width: int,
+           target_id: str | None = None) -> list[str]:
     """Render one retriever column as a list of lines of exactly ``width`` characters.
 
     Args:
@@ -179,29 +185,36 @@ def column(name: str, ranking, docs_by_id: dict, gold: set[str], k: int, width: 
             full ranking.
         k: Number of results shown.
         width: Column width in characters; longer lines are cut, shorter ones padded.
+        target_id: Optional passage chosen by the presenter; marked ``[ZIEL]`` among the top k. The column ends with
+            its rank in the full ranking. A target that is also gold gets both marks.
 
     Returns:
         Lines of the column (heading, rule, then per result: rank/score line, title, up to 3 snippet lines, blank
-        line; with ``gold`` finally a rule and the gold rank).
+        line; with ``gold`` or ``target_id`` finally a rule, the gold rank and the target rank).
     """
     from retrieval_metrics import best_gold_rank
     lines = [name, "-" * width]
     # For each of the top k results (rank, doc ID, score): add a rank/score line, the title and the snippet lines,
     # so the column shows the retrieved passages.
     for rank, (doc_id, score) in enumerate(ranking[:k], 1):
-        mark = "  [GOLD]" if doc_id in gold else ""
+        mark = ("  [GOLD]" if doc_id in gold else "") + ("  [ZIEL]" if doc_id == target_id else "")
         lines.append(f"{rank}. {doc_id}  Score {score:.3f}{mark}")
         lines.append("   " + title_and_body(docs_by_id[doc_id])[0][:width - 3])
         lines += snippet_lines(docs_by_id[doc_id], width)
         lines.append("")
+    if gold or target_id:
+        lines.append("-" * width)
     if gold:
-        lines += ["-" * width, f"Gold-Rang: {best_gold_rank(ranking, gold)} (volle Rangliste)"]
+        lines.append(f"Gold-Rang: {best_gold_rank(ranking, gold)} (volle Rangliste)")
+    if target_id:
+        # The target is a one-element "gold set": same rank function, rank in the full ranking.
+        lines.append(f"Ziel-Rang: {best_gold_rank(ranking, {target_id})} (volle Rangliste)")
     # List comprehension: pad or cut every line to exactly `width` characters so the columns align.
     return [line.ljust(width)[:width] for line in lines]
 
 
 def show(query: str, rankings: list[tuple[str, list]], docs_by_id: dict, gold: set[str], k: int,
-         total_width: int | None = None) -> None:
+         total_width: int | None = None, target_id: str | None = None) -> None:
     """Print the top-k columns side by side; with ``gold`` the gold marks and gold ranks are included.
 
     Args:
@@ -213,6 +226,8 @@ def show(query: str, rankings: list[tuple[str, list]], docs_by_id: dict, gold: s
         gold: Gold document IDs; empty for free-text queries (no marking, no gold rank).
         k: Number of results per column.
         total_width: Total line width in characters; ``None`` uses the terminal width (``FALLBACK_WIDTH`` if unknown).
+        target_id: Optional chosen passage (must be a key of ``docs_by_id``): marked ``[ZIEL]``, with target rank per
+            column and, below the columns, a line with its ID and title.
     """
     if total_width is None:
         total_width = shutil.get_terminal_size((FALLBACK_WIDTH, 24)).columns
@@ -221,10 +236,12 @@ def show(query: str, rankings: list[tuple[str, list]], docs_by_id: dict, gold: s
     width = max(30, (total_width - len(SEPARATOR) * (n_columns - 1)) // n_columns)
     print(f"\nFrage: {query}\n")
     # One rendered column (list of lines) per retriever.
-    columns = [column(name, ranking, docs_by_id, gold, k, width) for name, ranking in rankings]
+    columns = [column(name, ranking, docs_by_id, gold, k, width, target_id) for name, ranking in rankings]
     # Print line i of all columns joined by the separator; shorter columns are padded with blanks.
     for i in range(max(len(c) for c in columns)):
         print(SEPARATOR.join(c[i] if i < len(c) else " " * width for c in columns).rstrip())
+    if target_id:
+        print(f"\nZiel-Passage: {target_id}  {title_and_body(docs_by_id[target_id])[0]}")
     if gold:
         print(f"\nGold-Passage(n): {', '.join(sorted(gold))}  ([GOLD] = Gold-Passage unter den Top {k})")
 
@@ -243,6 +260,8 @@ def main() -> None:
     g = ap.add_mutually_exclusive_group()  # g: either a free query or a dataset query ID
     g.add_argument("--query", help="freie Frage")
     g.add_argument("--query-id", help="Frage-ID aus queries.normalized.jsonl (markiert Gold-Passagen)")
+    ap.add_argument("--target-id", help="doc_id einer gewählten Passage: Rang je Verfahren (Marker [ZIEL], Fußzeile "
+                                        "\"Ziel-Rang\"); kombinierbar mit --query und --query-id")
     ap.add_argument("--interactive", action="store_true", help="Eingabeschleife für freie Fragen")
     ap.add_argument("--k", type=int, default=DEFAULT_K, help="Treffer je Spalte (Default: %(default)s)")
     ap.add_argument("--width", type=int, help=f"Gesamtbreite der Ausgabe in Zeichen (Default: Terminalbreite, sonst {FALLBACK_WIDTH})")
@@ -267,6 +286,8 @@ def main() -> None:
     # Dict comprehension: doc ID -> doc record (lookup table for titles and snippets).
     docs_by_id = {str(d["doc_id"]): d for d in docs}
     doc_ids = list(docs_by_id)
+    if a.target_id and a.target_id not in docs_by_id:
+        fail(f"Ziel-ID {a.target_id!r} nicht in {a.dataset_dir}/docs.normalized.jsonl.")
     ds = a.dataset_dir.resolve().name  # ds: dataset name, part of the cache file tag (same tag as in embed_eval.py)
 
     # --- Passage vectors: from the shared embedding cache, otherwise encoded now (slow on first use) ---
@@ -305,7 +326,7 @@ def main() -> None:
         rankings = [(variant, bm25_ranking(bm25, tokenize, doc_ids, query))
                     for variant, (bm25, tokenize) in lexical.items()]
         rankings.append((a.model, dense_ranking(q_vec, d_emb, doc_ids)))
-        show(query, rankings, docs_by_id, gold, a.k, a.width)
+        show(query, rankings, docs_by_id, gold, a.k, a.width, a.target_id)
 
     # --- Answer queries: dataset query by ID (with gold), free text, or interactive loop (both without gold) ---
     if a.query_id:
