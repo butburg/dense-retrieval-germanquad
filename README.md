@@ -29,7 +29,7 @@ Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face
 
 ## Reproduktion über Notebook 05
 
-`code/05_hauptexperiment_germanquad.ipynb` beschreibt den Versuchsaufbau, lädt die persistierten Ergebnisse aus `code/output/harness/`, zeigt die Retrieval-Metriken aller Retriever, die 55 Tests (Modellpaare, Vergleiche gegen BM25 und gegen BM25-de), die Sensitivität bei 512 Token und Abbildung 1 und prüft Kennzahlen und Holm-Korrektur gegen `comparison_germanquad.json`. Mit `ENCODE = SCORE = False` (Standard) läuft es in wenigen Sekunden ohne Netz, GPU und API. `ENCODE = True` berechnet die Vektoren neu (CPU, mehrere Stunden; OpenAI-Läufe benötigen den API-Schlüssel), `SCORE = True` rechnet Ranking und Tests aus dem Cache.
+`code/05_hauptexperiment_germanquad.ipynb` beschreibt den Versuchsaufbau, lädt die persistierten Ergebnisse aus `code/output/harness/`, zeigt die Retrieval-Metriken aller Retriever, die 55 Tests (Modellpaare, Vergleiche gegen BM25 und gegen BM25-de), die Sensitivität bei 512 Token und Abbildung 2 (MRR@10 mit Konfidenzintervall) und prüft Kennzahlen und Holm-Korrektur gegen `comparison_germanquad.json`. Mit `ENCODE = SCORE = False` (Standard) läuft es in wenigen Sekunden ohne Netz, GPU und API. `ENCODE = True` berechnet die Vektoren neu (CPU, mehrere Stunden; OpenAI-Läufe benötigen den API-Schlüssel), `SCORE = True` rechnet Ranking und Tests aus dem Cache.
 
 Die Läufe lassen sich auch einzeln über die Skripte starten (im Ordner `code/`):
 
@@ -45,12 +45,14 @@ Die Notebooks 01 bis 04 dokumentieren den Datensatz-PoC (Download, Parsing, BM25
 
 ## Demo
 
-`code/demo_query.py` zeigt für eine freie Frage (`--query`) oder eine Frage aus dem Datensatz (`--query-id`) die Top-k-Passagen von BM25 und multilingual-e5-large nebeneinander (CPU, kein API-Schlüssel):
+`code/demo_query.py` zeigt für eine freie Frage (`--query`) oder eine Frage aus dem Datensatz (`--query-id`) die Top-k-Passagen von BM25, BM25-de und bge-m3 in drei Spalten nebeneinander (CPU, kein API-Schlüssel). Bei `--query-id` ist die Gold-Passage markiert, darunter steht ihr Rang je Verfahren in der vollen Rangliste. Die Modellgewichte lädt sentence-transformers vom Hugging-Face-Hub (`HF_HUB_OFFLINE=1` funktioniert mit sentence-transformers 5.7 nicht, die Vorführung braucht Netzzugang).
 
 ```bash
 cd code
-python demo_query.py --warm-cache                              # einmalig: Passage-Embeddings berechnen
-python demo_query.py --model e5-large --query-id q40369 --k 5
+python demo_query.py --warm-cache                              # einmalig: Passage-Embeddings von bge-m3 berechnen
+python demo_query.py --query-id q40321                         # drei Spalten, k = 3, Gold-Rang je Verfahren
+python demo_query.py --query "Wie lange hält eine Glühbirne?"  # freie Frage ohne Gold-Markierung
+python demo_query.py --model e5-large --query-id q40369 --k 5 --width 190   # anderes Modell, breitere Ausgabe
 ```
 
 ## Tests

@@ -18,11 +18,11 @@ Die Pilotwerte (BM25 und e5-large) dienten der Prüfung der Pipeline; die maßge
 
 ## Teil 2: Hauptexperiment (05 und Harness-Skripte)
 
-`05_hauptexperiment_germanquad.ipynb` ist in sieben Schritte gegliedert (0 Überblick und Glossar, 1 Daten, 2 Encoding, 3 Ranking und Kennzahlen, 4 Signifikanztests, 5 Sensitivität 512 Tokens, 6 BM25 Standard und BM25-de, 7 Zusammenfassung und Konsistenzprüfung); jeder Schritt beginnt mit „Was? Warum? Wie?“. Die Modelle sind vortrainiert: Das Encoding (474 Passagen und 2.204 Fragen zu Vektoren, Stunden auf CPU) ist der langsame Teil, das Ranking per Kosinus aus dem Cache dauert Sekunden. Zwei Schalter steuern die Neuberechnung: `ENCODE` (Vektoren aller neun Modelle berechnen, Cache) und `SCORE` (Ranking, BM25, BM25-de, Kennzahlen und alle Tests aus dem Cache); beide stehen standardmäßig auf `False`, dann lädt das Notebook nur gespeicherte Ergebnisse (wenige Sekunden, ohne Netz). `ONLY = [...]` beschränkt die Läufe auf einzelne Modellschlüssel; die Dauer jedes gestarteten Schritts steht in `output/harness/run_log.jsonl`, die Encodierzeiten in `encode_germanquad.json` bzw. `metrics_germanquad.json`. Das Notebook liest die normalisierten Dateien in `code/output/germanquad/`; die Notebooks 01 und 02 sind nur nötig, um sie aus den Rohdaten neu zu erzeugen. Es zeigt Tabelle 3 (Qualität), Tabelle 4 (Tests gegen BM25), Paarvergleiche, Tabelle 5 (BM25-de), Tabelle D4 (512-Sensitivität) und Abbildung 1 und prüft Kennzahlen und Holm-Korrektur gegen `comparison_germanquad.json`.
+`05_hauptexperiment_germanquad.ipynb` ist in sieben Schritte gegliedert (0 Überblick und Glossar, 1 Daten, 2 Encoding, 3 Ranking und Kennzahlen, 4 Signifikanztests, 5 Sensitivität 512 Tokens, 6 BM25 Standard und BM25-de, 7 Zusammenfassung und Konsistenzprüfung); jeder Schritt beginnt mit „Was? Warum? Wie?“. Die Modelle sind vortrainiert: Das Encoding (474 Passagen und 2.204 Fragen zu Vektoren, Stunden auf CPU) ist der langsame Teil, das Ranking per Kosinus aus dem Cache dauert Sekunden. Zwei Schalter steuern die Neuberechnung: `ENCODE` (Vektoren aller neun Modelle berechnen, Cache) und `SCORE` (Ranking, BM25, BM25-de, Kennzahlen und alle Tests aus dem Cache); beide stehen standardmäßig auf `False`, dann lädt das Notebook nur gespeicherte Ergebnisse (wenige Sekunden, ohne Netz). `ONLY = [...]` beschränkt die Läufe auf einzelne Modellschlüssel; die Dauer jedes gestarteten Schritts steht in `output/harness/run_log.jsonl`, die Encodierzeiten in `encode_germanquad.json` bzw. `metrics_germanquad.json`. Das Notebook liest die normalisierten Dateien in `code/output/germanquad/`; die Notebooks 01 und 02 sind nur nötig, um sie aus den Rohdaten neu zu erzeugen. Es zeigt Tabelle 3 (Qualität der Retriever), Tabelle 4 (Vergleiche gegen BM25 und BM25-de), die Paarvergleiche (Tabelle D2), Tabelle D4 (512-Sensitivität) und Abbildung 2 (MRR@10 mit Konfidenzintervall) und prüft Kennzahlen und Holm-Korrektur gegen `comparison_germanquad.json`.
 
 Retriever-Registry (`pylib/embedders.py`): `e5-large` (intfloat/multilingual-e5-large), `bge-m3` (BAAI/bge-m3), `gte-multilingual-base` (Alibaba-NLP/gte-multilingual-base), `jina-v3` (jinaai/jina-embeddings-v3), `openai-3-small` und `openai-3-large` (text-embedding-3-*, Key aus `EMBED_OPENAI_API_KEY`); dazu BM25 (`scripts/run_bm25.py`, nur GermanQuAD, Ausgabe `output/bm25_v2/`) und BM25-de (`bm25_german.py`, Stoppwörter und Snowball-Stemming, Ausgabe `output/bm25_de/`). Ebenfalls in der Registry stehen `qwen3-embedding-0.6b` (Qwen/Qwen3-Embedding-0.6B), `arctic-embed-l-v2` (Snowflake/snowflake-arctic-embed-l-v2.0) und `jina-v2-base-de` (jinaai/jina-embeddings-v2-base-de); alle neun Modelle laufen gleich (Ausgabe `output/harness/<model>/`).
 
-Testfamilien: `compare_models.py` rechnet in einem Lauf 55 Tests auf MRR@10 mit demselben Cluster-Randomisierungstest (Holm je Familie, Familiengröße = Testzahl): F1 alle 36 Paare der neun Modelle (`MODELS`), F2 je Modell gegen BM25 (9), F3 je Modell gegen BM25-de (9), F4 BM25-de gegen BM25 (1, ohne Korrektur). Success@k und MRR@k erscheinen nur deskriptiv in `table_main.md`. `table_main.md` (Tabelle 3) und Abbildung 1 zeigen alle elf Retriever; `tests/test_comparison_design.py` prüft Testzahl, Familiengrößen und Holm-Werte der JSON.
+Testfamilien: `compare_models.py` rechnet in einem Lauf 55 Tests auf MRR@10 mit demselben Cluster-Randomisierungstest (Holm je Familie, Familiengröße = Testzahl): F1 alle 36 Paare der neun Modelle (`MODELS`), F2 je Modell gegen BM25 (9), F3 je Modell gegen BM25-de (9), F4 BM25-de gegen BM25 (1, ohne Korrektur). Success@k und MRR@k erscheinen nur deskriptiv in `table_main.md`. `table_main.md` (Tabelle 3) und Abbildung 2 zeigen alle elf Retriever; `tests/test_comparison_design.py` prüft Testzahl, Familiengrößen und Holm-Werte der JSON.
 
 Harness-Skripte:
 - `embed_eval.py`: ein Embedder je Aufruf; `--max-seq-length 512` für die Sensitivität (Ausgabe `<model>__len512`).
@@ -45,22 +45,23 @@ python make_results.py
 
 ## Ergebnisdateien je Tabelle
 
-Die Tabellen und Abbildung 1 der schriftlichen Ausarbeitung stammen aus folgenden Dateien (Pfade relativ zum Repository):
+Die Tabellen und Abbildungen der schriftlichen Ausarbeitung stammen aus folgenden Dateien (Pfade relativ zum Repository; die Nummerierung entspricht der Ausarbeitung):
 
 | Tabelle / Abbildung | Inhalt | Ergebnisdatei |
 |---|---|---|
 | Tabelle 3, Tabelle D1 | Metriken aller Retriever | `code/output/harness/<Durchlauf>/metrics_germanquad.json` (neun Durchläufe, Schlüssel aus `pylib/embedders.py`), BM25 `code/output/bm25_v2/bm25_results.json`, BM25-de `code/output/bm25_de/bm25_results.json`; aufbereitet in `results/table_main.md` |
-| Tabellen 4 und 5, D2, D3, D5, D6 | alle Tests (55 in 4 Familien) | `code/output/harness/comparison_germanquad.json`, aufbereitet in `code/output/harness/results/table_significance.md` |
+| Tabelle 4, D2, D3 | alle Tests (55 in 4 Familien) | `code/output/harness/comparison_germanquad.json`, aufbereitet in `code/output/harness/results/table_significance.md` |
 | Tabelle D4 | Sensitivität 512 Tokens | Durchläufe `bge-m3__len512`, `gte-multilingual-base__len512`, `jina-v3__len512`; aufbereitet in `code/output/harness/results/table_len512.md` |
-| Abbildung 1 | MRR@10 mit 95-%-Konfidenzintervall | `code/output/harness/results/fig_mrr10_ci.png` |
-| Abbildung 2 | Ablauf der gepaarten Tests | `code/output/harness/results/fig_test_flow.png` |
-| Abbildung D1 | MRR@10-Differenzen aller 55 Paare | `code/output/harness/results/fig_pair_matrix.png` |
+| Tabelle B2 | Encoding-Zeit je Modell | Feld `encode_seconds` in `code/output/harness/<Durchlauf>/metrics_germanquad.json` und `encode_germanquad.json` |
+| Abbildung 1 | Ablauf der gepaarten Tests | `code/output/harness/results/fig_test_flow.png` |
+| Abbildung 2 | MRR@10 mit 95-%-Konfidenzintervall | `code/output/harness/results/fig_mrr10_ci.png` |
+| Abbildung 3 | MRR@10-Differenzen der 36 Modellpaare | `code/output/harness/results/fig_pair_matrix.png` |
 
 Per-Query-Ränge liegen als `per_query_germanquad.csv` in den Verzeichnissen der Durchläufe bzw. als `per_query_ranks.csv` unter `code/output/bm25_v2/` und `code/output/bm25_de/`. Tokenlängen der Passagen stehen in `code/output/harness/token_lengths.json`, Versionen und Revisionen je Durchlauf in den `metrics_germanquad.json`.
 
 MTEB-Abgleich: Das Referenzergebnis `results/intfloat__multilingual-e5-large/ab10c1a7…/GermanQuAD-Retrieval.json` aus dem Repository embeddings-benchmark/results wird mit `code/output/harness/e5-large/metrics_germanquad.json` verglichen, entsprechend `results/Snowflake__snowflake-arctic-embed-l-v2.0/edc2df7b…/GermanQuAD-Retrieval.json` mit `code/output/harness/arctic-embed-l-v2/metrics_germanquad.json`. Die Datensatzrevision der MTEB-Aufgabe ist `f5c87ae5`, die eigene `9af36714`.
 
-Encoding-Zeiten der Durchläufe mit nativer Eingabelänge (Dokumente und Queries ohne Cache-Treffer, Feld `encode_seconds` in `metrics_germanquad.json`): multilingual-e5-large 464,6 s, bge-m3 766,2 s, gte-multilingual-base 317,0 s, jina-embeddings-v3 1.751,0 s, text-embedding-3-small 21,3 s, text-embedding-3-large 25,1 s (OpenAI-API), snowflake-arctic-embed-l-v2.0 613,0 s, Qwen3-Embedding-0.6B 1.240,5 s, jina-embeddings-v2-base-de 405,4 s.
+Encoding-Zeiten der Durchläufe mit nativer Eingabelänge (474 Passagen und 2.204 Fragen ohne Cache-Treffer, Feld `encode_seconds` in `metrics_germanquad.json`, Gesamtdurchlauf vom 1. Oktober 2026, Tabelle B2 der Ausarbeitung): multilingual-e5-large 814,5 s, bge-m3 951,8 s, gte-multilingual-base 451,4 s, jina-embeddings-v3 2.263,4 s, text-embedding-3-small 22,2 s, text-embedding-3-large 41,3 s (OpenAI-API), snowflake-arctic-embed-l-v2.0 982,8 s, Qwen3-Embedding-0.6B 1.943,4 s, jina-embeddings-v2-base-de 704,1 s. Die Läufe teilten sich die vier Prozessorkerne teils mit anderen Prozessen; die Zeiten geben die Größenordnung an.
 
 ## GermanQuAD: Eingangsdateien und Felder
 
@@ -96,15 +97,15 @@ Der Harness bewertet Dense-Retriever auf jedem normalisierten Datensatz (Retriev
 - Verarbeitung: Präfixe, Tasks und Normalisierung je Modellkonfiguration, Embeddings als `.npy` gecacht, Ranking und Metriken aus `pylib/retrieval_metrics.py`.
 - Ausgabe: `output/harness/<run_name>/metrics_<dataset>.json` (Metriken, Konfiguration, Versionen), `per_query_<dataset>.csv` (Rang des ersten relevanten Docs), Cache in `output/harness/cache/` (git-ignoriert).
 
-## Demo-Skript (`demo_query.py`)
+## Vorführung (`demo_query.py`)
 
-Zeigt für eine freie Frage (`--query`) oder eine Frage aus dem Datensatz (`--query-id`, mit `[GOLD]`-Markierung und Gold-Rang) die Top-k von BM25 und einem offenen Embedding-Modell nebeneinander. BM25 kommt aus `scripts/run_bm25.py`, Embedding und Cache aus `pylib/embedders.py` und `embed_eval.py`; nur CPU, kein API-Key.
+Zeigt für eine freie Frage (`--query`) oder eine Frage aus dem Datensatz (`--query-id`) die Top-k-Passagen von drei Verfahren in drei Spalten nebeneinander: BM25 | BM25-de | Embedding-Modell (Default bge-m3, wählbar mit `--model e5-large|bge-m3|gte-multilingual-base|jina-v3`; nur CPU, kein API-Key). BM25 und BM25-de bauen ihren Index mit derselben Funktion `run_bm25.build_index` (Parameter aus `scripts/run_bm25.py`; BM25-de mit `preprocess_de` aus `pylib/german_text.py`), Embedding und Cache stammen aus `pylib/embedders.py` und `embed_eval.py`. Bei `--query-id` ist die Gold-Passage mit `[GOLD]` markiert, darunter steht ihr Rang je Verfahren in der vollen Rangliste von 474 Passagen; bei `--query` (Freitext) gibt es keine Gold-Angabe.
 
 - Einrichtung: venv mit `requirements-embed.txt` (torch CPU), Modellgewichte per Netz laden (gepinnte Revision).
-- Cache füllen (einmalig, 11 Min. auf 4 CPU-Kernen): `python demo_query.py --warm-cache` (Cache unter `output/harness/cache/`, git-ignoriert).
-- Aufruf: `python demo_query.py --model e5-large --query-id q40369 --k 5`. Das Laden des Modells und die Query-Kodierung dauern beim ersten Aufruf rund 12 s, danach bei `--interactive` kürzer.
-- Prüfung: `tests/test_demo_query.py` vergleicht für 25 Query-IDs Gold-Rang und BM25-Top-10 mit den gespeicherten per-query-CSVs.
-- Hinweis: `HF_HUB_OFFLINE=1` scheitert mit sentence-transformers 5.7 beim Laden des Modells (Fehler „Unrecognized processing class“); die Demo braucht daher Netzzugang zum Hugging-Face-Hub.
+- Cache füllen (einmalig je Modell): `python demo_query.py --warm-cache` (bge-m3: 381 s auf einem Apple M3 Pro, 12 Kerne, CPU; Cache unter `output/harness/cache/`, git-ignoriert). Mit `--model e5-large` entsprechend für e5.
+- Aufruf: `python demo_query.py --query-id q40321` (drei Spalten, `k = 3`) oder `python demo_query.py --query "Wie lange hält eine Glühbirne?"`. `--k` ändert die Trefferzahl je Spalte, `--width` die Gesamtbreite in Zeichen (Default: Terminalbreite, sonst 170; lesbar sind etwa 160 bis 190 Zeichen). Das Laden des Modells und die Kodierung der Frage dauern beim ersten Aufruf rund 6 bis 7 s, der gesamte Aufruf etwa 10 s; bei `--interactive` entfällt das Laden ab der zweiten Frage.
+- Prüfung: `tests/test_demo_query.py` vergleicht für 25 Query-IDs Gold-Rang und Top-10 von BM25 und BM25-de sowie die Gold-Ränge von e5-large und bge-m3 (sofern der Cache vorhanden ist) mit den gespeicherten Per-Query-Dateien und prüft die Spaltenansicht. Gleichstände zwischen Embedding-Scores treten in den Läufen nicht auf (Anhang B der Ausarbeitung).
+- Hinweis: `HF_HUB_OFFLINE=1` scheitert mit sentence-transformers 5.7 beim Laden des Modells (Fehler „Unrecognized processing class“); die Vorführung braucht daher Netzzugang zum Hugging-Face-Hub, auch wenn die Gewichte schon im lokalen Cache liegen.
 
 ## Outputs unter code/output
 

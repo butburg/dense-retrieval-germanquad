@@ -1,18 +1,21 @@
-"""Live-Demo: Top-k von BM25 und einem offenen Embedding-Modell nebeneinander (nur CPU, kein API-Key).
+"""Live-Demo: Top-k von BM25, BM25-de und einem offenen Embedding-Modell nebeneinander (nur CPU, kein API-Key).
 
 Nutzung (im Ordner code/):
-  python demo_query.py --query-id q40369 --k 5
-  python demo_query.py --query "Wer entwickelte den seillosen Aufzug?" --model e5-large
-  python demo_query.py --warm-cache            # Dokumentvektoren einmalig berechnen und cachen
+  python demo_query.py --query-id q40321                       # drei Spalten BM25 | BM25-de | bge-m3, k = 3
+  python demo_query.py --query "Wer entwickelte den seillosen Aufzug?" --model e5-large --k 5
+  python demo_query.py --warm-cache                            # Dokumentvektoren einmalig berechnen und cachen
 Eingaben: {docs,queries,qrels}.normalized.jsonl in --dataset-dir (Default output/germanquad).
 Ausgaben: Terminal; geschrieben wird nur der Embedding-Cache output/harness/cache/.
-BM25 und Embedding-Logik stammen aus scripts/run_bm25.py, embed_eval.py und pylib/embedders.py.
+BM25, BM25-de und Embedding-Logik stammen aus scripts/run_bm25.py, pylib/german_text.py, embed_eval.py und
+pylib/embedders.py.
 
 Role in the experiment: presentation tool, independent of the evaluation. It shows for one query (a dataset query by
-ID, or free text) the top-k passages of BM25 (regex tokenization, parameters of scripts/run_bm25.py) next to those of
-one open embedding model, marks gold passages (only for ``--query-id``) and prints the gold rank in the full ranking.
-Passage vectors are read from / written to the same cache as embed_eval.py (output/harness/cache/), so a run after
-``embed_eval.py --stage encode`` needs no re-encoding. Only the single query is encoded at runtime. The imports of
+ID, or free text) the top-k passages of three retrievers in three columns: BM25 (regex tokenization), BM25-de (same index
+parameters, stopword removal and Snowball stemming of pylib/german_text.py) and one open embedding model. Gold passages
+are marked (only for ``--query-id``) and the gold rank of each retriever in its full ranking is printed below the
+columns. Both BM25 indexes are built by ``run_bm25.build_index``, the single definition shared with the experiment
+scripts. Passage vectors are read from / written to the same cache as embed_eval.py (output/harness/cache/), so a run
+after ``embed_eval.py --stage encode`` needs no re-encoding. Only the single query is encoded at runtime. The imports of
 heavy modules are deferred into the functions so that ``--help`` and error messages work without them.
 """
 from __future__ import annotations
@@ -27,6 +30,15 @@ sys.path.insert(0, str(CODE))
 
 OPEN_MODELS = ("e5-large", "bge-m3", "gte-multilingual-base", "jina-v3")  # local models allowed in the demo (no API key)
 DS_FILES = ("docs", "queries", "qrels")  # normalized files read from the dataset directory
+LEXICAL_VARIANTS = ("BM25", "BM25-de")  # lexical columns shown before the dense column
+DEFAULT_MODEL = "bge-m3"  # dense column of the screencast
+DEFAULT_K = 3  # results per column; three columns of k = 3 stay readable in a 1080p terminal
+FALLBACK_WIDTH = 170  # total terminal width in characters when neither the terminal nor --width provides one
+SEPARATOR = " | "  # between columns
+SNIPPET_LINES = 3  # snippet lines per result
+# One source for the offline hint (README: "Hinweis" in the section on demo_query.py).
+OFFLINE_HINT = ("Gewichte einmalig mit Netzzugang laden; HF_HUB_OFFLINE=1 funktioniert mit sentence-transformers 5.7 "
+                "nicht (siehe code/README.md), das Netz muss auch bei der Vorführung erreichbar sein.")
 
 
 def fail(msg: str) -> None:
@@ -56,25 +68,31 @@ def load_dataset(dataset_dir: Path):
     return [load_jsonl(paths[n]) for n in DS_FILES]
 
 
-def build_bm25(doc_ids: list[str], docs_by_id: dict):
-    """BM25 index with the parameters of scripts/run_bm25.py.
+def build_bm25(doc_ids: list[str], docs_by_id: dict, variant: str = "BM25"):
+    """BM25 index of one lexical variant with the parameters of scripts/run_bm25.py.
 
     Args:
         doc_ids: Document IDs in index order, e.g. ``["c1", "c2"]``.
         docs_by_id: Document ID -> normalized document record.
+        variant: ``"BM25"`` (lowercase, regex tokens) or ``"BM25-de"`` (additionally stopword removal and Snowball
+            stemming, ``preprocess_de``); documents and queries use the same function.
 
     Returns:
         Tuple ``(bm25, tokenize)``: the ``BM25Okapi`` index (rows in the order of ``doc_ids``) and the tokenizer
         that must be applied to queries.
+
+    Raises:
+        ValueError: If ``variant`` is not in ``LEXICAL_VARIANTS``.
     """
+    if variant not in LEXICAL_VARIANTS:
+        raise ValueError(f"Unbekannte lexikalische Variante {variant!r}; erlaubt: {', '.join(LEXICAL_VARIANTS)}")
     try:
         import run_bm25 as rb
+        from german_text import preprocess_de, tokenize_de
     except ImportError as ex:
         fail(f"BM25-Abhängigkeiten fehlen ({ex}). Umgebung: pip install -r code/requirements-embed.txt")
-    # List comprehension over doc_ids: one token list per passage, so index row i belongs to doc_ids[i].
-    bm25 = rb.BM25Okapi([rb.tokenize_de(rb.doc_text(docs_by_id[i])) for i in doc_ids],
-                        k1=rb.BM25_K1, b=rb.BM25_B, epsilon=rb.BM25_EPSILON)
-    return bm25, rb.tokenize_de
+    tokenize = tokenize_de if variant == "BM25" else preprocess_de
+    return rb.build_index(doc_ids, docs_by_id, tokenize), tokenize
 
 
 def bm25_ranking(bm25, tokenize, doc_ids: list[str], query: str) -> list[tuple[str, float]]:
@@ -132,93 +150,102 @@ def title_and_body(doc: dict) -> tuple[str, str]:
     return head.strip(), rest.strip() or head.strip()
 
 
-def snippet(doc: dict, n: int = 150) -> str:
-    """Whitespace-collapsed passage start of about ``n`` characters.
+def snippet_lines(doc: dict, width: int, max_lines: int = SNIPPET_LINES) -> list[str]:
+    """Whitespace-collapsed passage start, wrapped to at most ``max_lines`` indented lines.
 
     Args:
         doc: Normalized document record.
-        n: Maximum number of body characters before the text is cut and an ellipsis is appended.
+        width: Maximum line length including the three-space indent.
+        max_lines: Number of lines kept; a cut text ends with an ellipsis.
 
     Returns:
-        Single-line excerpt of the passage body ("=" characters of wiki headings are replaced by spaces).
+        Lines of the passage body ("=" characters of wiki headings are replaced by spaces).
     """
     # split() cuts at any whitespace run, join(" ") glues the words with single spaces: collapses line breaks and
     # repeated blanks.
     body = " ".join(title_and_body(doc)[1].replace("=", " ").split())
-    return body if len(body) <= n else body[:n].rstrip() + " …"
+    return textwrap.wrap(body, width, initial_indent="   ", subsequent_indent="   ", max_lines=max_lines,
+                         placeholder=" …")
 
 
 def column(name: str, ranking, docs_by_id: dict, gold: set[str], k: int, width: int) -> list[str]:
     """Render one retriever column as a list of lines of exactly ``width`` characters.
 
     Args:
-        name: Column heading (``"BM25"`` or the model key).
+        name: Column heading (``"BM25"``, ``"BM25-de"`` or the model key).
         ranking: Full ranking as ``(doc_id, score)``, best first; only the first ``k`` are shown.
         docs_by_id: Document ID -> record, used for title and snippet.
-        gold: Gold document IDs; hits are marked ``[GOLD]``.
+        gold: Gold document IDs; hits are marked ``[GOLD]``. If not empty, the column ends with the gold rank in the
+            full ranking.
         k: Number of results shown.
         width: Column width in characters; longer lines are cut, shorter ones padded.
 
     Returns:
-        Lines of the column (heading, rule, then per result: rank/score line, title, up to 3 snippet lines, blank line).
+        Lines of the column (heading, rule, then per result: rank/score line, title, up to 3 snippet lines, blank
+        line; with ``gold`` finally a rule and the gold rank).
     """
+    from retrieval_metrics import best_gold_rank
     lines = [name, "-" * width]
-    # For each of the top k results (r = rank, d = doc ID, s = score): add a rank/score line,
-    # the title and up to three snippet lines, so the column shows the retrieved passages.
-    for r, (d, s) in enumerate(ranking[:k], 1):
-        mark = "  [GOLD]" if d in gold else ""
-        lines.append(f"{r}. {d}  Score {s:.3f}{mark}")
-        lines.append("   " + title_and_body(docs_by_id[d])[0][:width - 3])
-        # textwrap.wrap breaks the snippet into lines of at most `width` characters; [:3] keeps the first three.
-        lines += textwrap.wrap(snippet(docs_by_id[d]), width, initial_indent="   ", subsequent_indent="   ")[:3]
+    # For each of the top k results (rank, doc ID, score): add a rank/score line, the title and the snippet lines,
+    # so the column shows the retrieved passages.
+    for rank, (doc_id, score) in enumerate(ranking[:k], 1):
+        mark = "  [GOLD]" if doc_id in gold else ""
+        lines.append(f"{rank}. {doc_id}  Score {score:.3f}{mark}")
+        lines.append("   " + title_and_body(docs_by_id[doc_id])[0][:width - 3])
+        lines += snippet_lines(docs_by_id[doc_id], width)
         lines.append("")
-    # List comprehension: pad or cut every line to exactly `width` characters so the two columns align.
-    return [l.ljust(width)[:width] for l in lines]
+    if gold:
+        lines += ["-" * width, f"Gold-Rang: {best_gold_rank(ranking, gold)} (volle Rangliste)"]
+    # List comprehension: pad or cut every line to exactly `width` characters so the columns align.
+    return [line.ljust(width)[:width] for line in lines]
 
 
-def show(query: str, rk_bm25, rk_dense, docs_by_id: dict, gold: set[str], k: int, model: str) -> None:
-    """Print both top-k columns side by side and, if ``gold`` is given, the gold ranks.
+def show(query: str, rankings: list[tuple[str, list]], docs_by_id: dict, gold: set[str], k: int,
+         total_width: int | None = None) -> None:
+    """Print the top-k columns side by side; with ``gold`` the gold marks and gold ranks are included.
 
     Args:
         query: Query text, printed as heading.
-        rk_bm25: Full BM25 ranking ``(doc_id, score)``.
-        rk_dense: Full dense ranking ``(doc_id, score)``.
+        rankings: ``(column heading, full ranking)`` per retriever in display order, e.g.
+            ``[("BM25", rk_bm25), ("BM25-de", rk_de), ("bge-m3", rk_dense)]``; a ranking is ``(doc_id, score)``
+            pairs, best first.
         docs_by_id: Document ID -> record.
-        gold: Gold document IDs; empty for free-text queries (no marking, no gold rank line).
+        gold: Gold document IDs; empty for free-text queries (no marking, no gold rank).
         k: Number of results per column.
-        model: Model key, used as heading of the dense column.
+        total_width: Total line width in characters; ``None`` uses the terminal width (``FALLBACK_WIDTH`` if unknown).
     """
-    cols = shutil.get_terminal_size((160, 24)).columns
-    w = max(40, (cols - 3) // 2)
+    if total_width is None:
+        total_width = shutil.get_terminal_size((FALLBACK_WIDTH, 24)).columns
+    n_columns = len(rankings)
+    # Equal column widths; the separators between the columns take the rest of the line.
+    width = max(30, (total_width - len(SEPARATOR) * (n_columns - 1)) // n_columns)
     print(f"\nFrage: {query}\n")
-    # Generator over the two (heading, ranking) pairs: renders the BM25 column and the dense column; unpacking gives a
-    # and b.
-    a, b = (column(n, r, docs_by_id, gold, k, w) for n, r in (("BM25", rk_bm25), (model, rk_dense)))
-    # For every output line index up to the longer column: print the BM25 line and the dense line side by side,
-    # padding the shorter column with blanks.
-    for i in range(max(len(a), len(b))):
-        print(f"{a[i] if i < len(a) else ' ' * w} | {b[i] if i < len(b) else ''}".rstrip())
+    # One rendered column (list of lines) per retriever.
+    columns = [column(name, ranking, docs_by_id, gold, k, width) for name, ranking in rankings]
+    # Print line i of all columns joined by the separator; shorter columns are padded with blanks.
+    for i in range(max(len(c) for c in columns)):
+        print(SEPARATOR.join(c[i] if i < len(c) else " " * width for c in columns).rstrip())
     if gold:
-        from retrieval_metrics import best_gold_rank
-        print(f"Gold-Passage(n): {', '.join(sorted(gold))} | Gold-Rang BM25: {best_gold_rank(rk_bm25, gold)}"
-              f" | Gold-Rang {model}: {best_gold_rank(rk_dense, gold)} (volle Rangliste)")
+        print(f"\nGold-Passage(n): {', '.join(sorted(gold))}  ([GOLD] = Gold-Passage unter den Top {k})")
 
 
 def main() -> None:
-    """Parse arguments, load passage vectors (cache or encode), then answer queries with BM25 and the dense model.
+    """Parse arguments, load passage vectors (cache or encode), then answer queries with BM25, BM25-de and the dense model.
 
-    Exits with status 1 and a message on invalid model/``--k``, missing data, or a model that cannot be loaded.
+    Exits with status 1 and a message on invalid model/``--k``/``--width``, missing data, or a model that cannot be
+    loaded.
     Writes only to the embedding cache ``output/harness/cache/``.
     """
     # --- Parse and validate arguments ---
     from embedders import REGISTRY
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", default="e5-large", help=f"offene Modelle: {', '.join(OPEN_MODELS)}")
+    ap.add_argument("--model", default=DEFAULT_MODEL, help=f"offene Modelle: {', '.join(OPEN_MODELS)} (Default: %(default)s)")
     g = ap.add_mutually_exclusive_group()  # g: either a free query or a dataset query ID
     g.add_argument("--query", help="freie Frage")
     g.add_argument("--query-id", help="Frage-ID aus queries.normalized.jsonl (markiert Gold-Passagen)")
     ap.add_argument("--interactive", action="store_true", help="Eingabeschleife für freie Fragen")
-    ap.add_argument("--k", type=int, default=5)
+    ap.add_argument("--k", type=int, default=DEFAULT_K, help="Treffer je Spalte (Default: %(default)s)")
+    ap.add_argument("--width", type=int, help=f"Gesamtbreite der Ausgabe in Zeichen (Default: Terminalbreite, sonst {FALLBACK_WIDTH})")
     ap.add_argument("--dataset-dir", type=Path, default=CODE / "output" / "germanquad")
     ap.add_argument("--warm-cache", action="store_true", help="nur Dokumentvektoren cachen und beenden")
     a = ap.parse_args()
@@ -230,6 +257,8 @@ def main() -> None:
         fail(f"Unbekanntes Modell {a.model!r}. Zulässig: {', '.join(OPEN_MODELS)}.")
     if a.k < 1:
         fail("--k muss mindestens 1 sein.")
+    if a.width is not None and a.width < 100:
+        fail("--width muss mindestens 100 sein (drei Spalten).")
     if not (a.warm_cache or a.query or a.query_id or a.interactive):
         ap.error("--query, --query-id, --interactive oder --warm-cache angeben")
 
@@ -254,27 +283,29 @@ def main() -> None:
         d_emb, hit, _ = cached_encode(emb, [doc_text(docs_by_id[i]) for i in doc_ids], False, cache, f"{ds}_docs")
     except Exception as ex:  # noqa: BLE001
         fail(f"Modell {emb.cfg.model_name} (Revision {emb.cfg.revision}) nicht ladbar: {type(ex).__name__}: {ex}\n"
-             "Gewichte einmalig mit Netzzugang laden (danach HF_HUB_OFFLINE=1 möglich).")
+             + OFFLINE_HINT)
     print(f"Dokumentvektoren: {'aus Cache' if hit else 'neu berechnet'} ({time.time() - t0:.1f} s), Form {d_emb.shape}")
     if a.warm_cache:
         return
 
-    # --- BM25 index and gold sets (threshold 1, as in the experiment) ---
-    bm25, tokenize = build_bm25(doc_ids, docs_by_id)
+    # --- Both BM25 indexes and gold sets (threshold 1, as in the experiment) ---
+    # Dict comprehension: column heading -> (index, tokenizer) for BM25 and BM25-de.
+    lexical = {variant: build_bm25(doc_ids, docs_by_id, variant) for variant in LEXICAL_VARIANTS}
     gold_by_q = build_gold(qrels, set(doc_ids), 1)
 
     def run(query: str, gold: set[str]) -> None:
-        """Encode one query, rank with both retrievers and print the side-by-side result."""
+        """Encode one query, rank with all three retrievers and print the side-by-side result."""
         t = time.time()
         try:
             q_vec = emb.encode([query.strip()], True)
         except Exception as ex:  # noqa: BLE001
-            fail(f"Modell {emb.cfg.model_name} nicht ladbar: {type(ex).__name__}: {str(ex)[:200]}\n"
-                 "Gewichte einmalig mit Netzzugang laden; HF_HUB_OFFLINE=1 funktioniert mit "
-                 "sentence-transformers 5.7 nicht (siehe code/README.md).")
+            fail(f"Modell {emb.cfg.model_name} nicht ladbar: {type(ex).__name__}: {str(ex)[:200]}\n" + OFFLINE_HINT)
         print(f"Query-Encoding (inkl. Modell-Laden beim ersten Aufruf): {time.time() - t:.2f} s")
-        show(query, bm25_ranking(bm25, tokenize, doc_ids, query), dense_ranking(q_vec, d_emb, doc_ids),
-             docs_by_id, gold, a.k, a.model)
+        # List comprehension: one (heading, full ranking) pair per lexical variant, then the dense column.
+        rankings = [(variant, bm25_ranking(bm25, tokenize, doc_ids, query))
+                    for variant, (bm25, tokenize) in lexical.items()]
+        rankings.append((a.model, dense_ranking(q_vec, d_emb, doc_ids)))
+        show(query, rankings, docs_by_id, gold, a.k, a.width)
 
     # --- Answer queries: dataset query by ID (with gold), free text, or interactive loop (both without gold) ---
     if a.query_id:

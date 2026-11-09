@@ -17,12 +17,11 @@ from importlib.metadata import version as pv
 from pathlib import Path
 
 import pandas as pd
-from rank_bm25 import BM25Okapi
 
 CODE = Path(__file__).resolve().parent
 sys.path.insert(0, str(CODE / "pylib"))
 sys.path.insert(0, str(CODE / "scripts"))
-from local_dataset_io import doc_text, load_jsonl  # noqa: E402
+from local_dataset_io import load_jsonl  # noqa: E402
 from retrieval_metrics import (K_VALUES, RELEVANCE_THRESHOLD, best_gold_rank, build_gold, compute_metrics,  # noqa: E402
                                first_relevant_ranks)
 from german_text import preprocess_de, preprocessing_info  # noqa: E402
@@ -51,10 +50,8 @@ def main(argv=None) -> None:
     # Dict comprehension: doc ID -> doc record (lookup table; a repeated ID would keep the last record).
     docs_by_id = {str(d["doc_id"]): d for d in docs}
     doc_ids = list(docs_by_id)
-    # List comprehension over doc_ids: one preprocessed (stopword-free, stemmed) token list per document;
-    # row i of the index belongs to doc_ids[i].
-    bm25 = BM25Okapi([preprocess_de(doc_text(docs_by_id[i])) for i in doc_ids],
-                     k1=base.BM25_K1, b=base.BM25_B, epsilon=base.BM25_EPSILON)
+    # Index over preprocessed (stopword-free, stemmed) tokens; row i belongs to doc_ids[i].
+    bm25 = base.build_index(doc_ids, docs_by_id, preprocess_de)
     # gold: query_id -> set of relevant doc_ids (qrels filtered by threshold and corpus membership)
     gold = build_gold(qrels, set(doc_ids), RELEVANCE_THRESHOLD)
     # qids: query IDs in input order; ranked: top-max(k) doc IDs per query (same order as qids);

@@ -1,8 +1,7 @@
-"""demo_query.py: Gold-Ränge müssen mit den gespeicherten per-query-CSVs übereinstimmen."""
+"""demo_query.py: Gold-Ränge müssen mit den gespeicherten per-query-CSVs übereinstimmen; Spaltenansicht mit drei Spalten."""
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -13,18 +12,20 @@ sys.path.insert(0, str(CODE / "scripts"))
 
 DS = CODE / "output" / "germanquad"
 BM25_CSV = CODE / "output" / "bm25_v2" / "per_query_ranks.csv"
-E5_CSV = CODE / "output" / "harness" / "e5-large" / "per_query_germanquad.csv"
-CACHE = CODE / "output" / "harness" / "cache"
+BM25_DE_CSV = CODE / "output" / "bm25_de" / "per_query_ranks.csv"
+HARNESS = CODE / "output" / "harness"
+CACHE = HARNESS / "cache"
 N = 25
 pytest.importorskip("rank_bm25")
 from retrieval_metrics import best_gold_rank  # noqa: E402  (single definition of the best gold rank)
-pytestmark = pytest.mark.skipif(not (DS / "docs.normalized.jsonl").exists() or not BM25_CSV.exists(),
-                                reason="normalisierte Daten oder bm25_v2-CSV fehlen")
+pytestmark = pytest.mark.skipif(not (DS / "docs.normalized.jsonl").exists() or not BM25_CSV.exists()
+                                or not BM25_DE_CSV.exists(),
+                                reason="normalisierte Daten oder BM25-CSVs fehlen")
 
 
 def _sample_qids(ids: list[str]) -> list[str]:
     rest = [q for q in ids if q != "q40369"]
-    return ["q40369"] + rest[:: max(1, len(rest) // (N - 1))][: N - 1]
+    return ["q40369", "q40321"] + rest[:: max(1, len(rest) // (N - 1))][: N - 2]
 
 
 @pytest.fixture(scope="module")
@@ -39,33 +40,92 @@ def data():
         build_gold(qrels, set(doc_ids), 1), doc_text
 
 
-def test_bm25_gold_rank_and_top10_match_csv(data):
+@pytest.mark.parametrize("variant, csv_path", [("BM25", BM25_CSV), ("BM25-de", BM25_DE_CSV)])
+def test_lexical_gold_rank_and_top10_match_csv(data, variant, csv_path):
     dq, docs_by_id, doc_ids, qtext, gold, _ = data
-    ref = pd.read_csv(BM25_CSV, dtype={"query_id": str}).query("dataset == 'germanquad'").set_index("query_id")
-    bm25, tok = dq.build_bm25(doc_ids, docs_by_id)
+    ref = pd.read_csv(csv_path, dtype={"query_id": str}).query("dataset == 'germanquad'").set_index("query_id")
+    bm25, tokenize = dq.build_bm25(doc_ids, docs_by_id, variant)
     qids = _sample_qids(list(qtext))
     assert len(qids) >= 20
     for qid in qids:
-        rk = dq.bm25_ranking(bm25, tok, doc_ids, qtext[qid])
-        assert best_gold_rank(rk, gold[qid]) == ref.loc[qid, "best_gold_rank_full"]
-        assert [d for d, _ in rk[:10]] == ref.loc[qid, "top_doc_ids"].split(" | ")
+        ranking = dq.bm25_ranking(bm25, tokenize, doc_ids, qtext[qid])
+        assert best_gold_rank(ranking, gold[qid]) == ref.loc[qid, "best_gold_rank_full"], (variant, qid)
+        assert [d for d, _ in ranking[:10]] == ref.loc[qid, "top_doc_ids"].split(" | "), (variant, qid)
 
 
-def test_e5_gold_rank_matches_csv(data):
+def test_unknown_lexical_variant_is_rejected(data):
+    dq, docs_by_id, doc_ids, *_ = data
+    with pytest.raises(ValueError):
+        dq.build_bm25(doc_ids, docs_by_id, "BM25-xx")
+
+
+def test_bm25_index_has_single_definition():
+    """Index construction (parameters) lives in run_bm25.build_index; demo and bm25_german only call it."""
+    counts = {name: (CODE / name).read_text(encoding="utf-8").count("BM25Okapi(")
+              for name in ("scripts/run_bm25.py", "bm25_german.py", "demo_query.py")}
+    assert counts == {"scripts/run_bm25.py": 1, "bm25_german.py": 0, "demo_query.py": 0}
+
+
+@pytest.mark.parametrize("model", ["e5-large", "bge-m3"])
+def test_dense_gold_rank_matches_csv(data, model):
     dq, docs_by_id, doc_ids, qtext, gold, doc_text = data
-    if not list(CACHE.glob("e5-large__germanquad_docs__*.npy")):
-        pytest.skip("Dokument-Embedding-Cache fehlt (python code/demo_query.py --warm-cache)")
+    if not list(CACHE.glob(f"{model}__germanquad_docs__*.npy")):
+        pytest.skip(f"Dokument-Embedding-Cache für {model} fehlt (python code/demo_query.py --warm-cache --model {model})")
     from embed_eval import cached_encode
     from embedders import Embedder, get_config
-    emb = Embedder(get_config("e5-large"))
+    emb = Embedder(get_config(model))
     d_emb, hit, _ = cached_encode(emb, [doc_text(docs_by_id[i]) for i in doc_ids], False, CACHE, "germanquad_docs")
     assert hit
-    ref = pd.read_csv(E5_CSV, dtype={"query_id": str}).set_index("query_id")
+    ref = pd.read_csv(HARNESS / model / "per_query_germanquad.csv", dtype={"query_id": str}).set_index("query_id")
     qids = _sample_qids(list(qtext))
     try:
         q_emb = emb.encode([qtext[q] for q in qids], True)
     except Exception as ex:  # noqa: BLE001
         pytest.skip(f"Modell nicht ladbar: {type(ex).__name__}")
     for qid, qv in zip(qids, q_emb):
-        rk = dq.dense_ranking(qv[None, :], d_emb, doc_ids)
-        assert best_gold_rank(rk, gold[qid]) == ref.loc[qid, "rank_first_relevant"]
+        ranking = dq.dense_ranking(qv[None, :], d_emb, doc_ids)
+        assert best_gold_rank(ranking, gold[qid]) == ref.loc[qid, "rank_first_relevant"], (model, qid)
+
+
+# --- Column view (no model needed) ---
+def _toy_view(dq, gold: set[str], width: int, capsys) -> list[str]:
+    docs_by_id = {f"c{i}": {"doc_id": f"c{i}", "title": "", "text": f"Titel{i}\nText {i} " + "wort " * 60} for i in (1, 2, 3, 4)}
+    rankings = [("BM25", [("c1", 3.0), ("c2", 2.0), ("c3", 1.0), ("c4", 0.5)]),
+                ("BM25-de", [("c2", 4.0), ("c1", 2.0), ("c3", 1.0), ("c4", 0.5)]),
+                ("bge-m3", [("c4", 0.9), ("c3", 0.8), ("c2", 0.7), ("c1", 0.1)])]
+    dq.show("Testfrage?", rankings, docs_by_id, gold, 3, width)
+    return capsys.readouterr().out.splitlines()
+
+
+def test_show_has_three_columns_with_gold_ranks(data, capsys):
+    dq = data[0]
+    lines = _toy_view(dq, {"c1"}, 170, capsys)
+    heading = next(line for line in lines if line.startswith("BM25"))
+    assert heading.split(" | ") == ["BM25".ljust(len(heading.split(" | ")[0])),
+                                    "BM25-de".ljust(len(heading.split(" | ")[1])), "bge-m3"]
+    assert max(len(line) for line in lines) <= 170
+    rank_line = next(line for line in lines if line.startswith("Gold-Rang"))
+    assert [part.strip() for part in rank_line.split(" | ")] == [
+        "Gold-Rang: 1 (volle Rangliste)", "Gold-Rang: 2 (volle Rangliste)", "Gold-Rang: 4 (volle Rangliste)"]
+    marks = sum(line.count("[GOLD]") for line in lines if "Score" in line)  # marks on result lines only
+    assert marks == 2  # c1 is in the BM25 and BM25-de top 3, not in bge-m3's
+
+
+def test_show_free_text_has_no_gold_marking(data, capsys):
+    dq = data[0]
+    lines = _toy_view(dq, set(), 170, capsys)
+    assert not any("[GOLD]" in line or "Gold-Rang" in line or "Gold-Passage" in line for line in lines)
+    assert len(next(line for line in lines if line.startswith("BM25")).split(" | ")) == 3
+
+
+def test_show_respects_width_option(data, capsys):
+    dq = data[0]
+    assert max(len(line) for line in _toy_view(dq, {"c1"}, 130, capsys)) <= 130
+
+
+def test_snippet_lines_are_short_and_indented(data):
+    dq, docs_by_id, *_ = data
+    doc = next(iter(docs_by_id.values()))
+    lines = dq.snippet_lines(doc, 50)
+    assert 1 <= len(lines) <= dq.SNIPPET_LINES and all(len(line) <= 50 for line in lines)
+    assert all(line.startswith("   ") for line in lines)

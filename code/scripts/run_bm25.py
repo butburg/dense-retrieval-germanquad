@@ -35,6 +35,25 @@ DATASETS = {"germanquad": {r: CODE / "output" / "germanquad" / f"{r}.normalized.
                            for r in ("queries", "docs", "qrels")}}
 
 
+def build_index(doc_ids: list[str], docs_by_id: dict, tokenize) -> BM25Okapi:
+    """Build the BM25 index with the shared parameters; the single place where the index is constructed.
+
+    Used for BM25 (``tokenize=tokenize_de``) and BM25-de (``tokenize=preprocess_de``) in the experiment scripts and in
+    ``demo_query.py``, so both baselines differ only in the tokenizer.
+
+    Args:
+        doc_ids: Document IDs in index order, e.g. ``["c1", "c2"]``; index row ``i`` belongs to ``doc_ids[i]``.
+        docs_by_id: Document ID -> normalized document record (``doc_text`` is indexed).
+        tokenize: Function text -> token list, applied to every document; queries need the same function.
+
+    Returns:
+        ``BM25Okapi`` index with ``BM25_K1``, ``BM25_B`` and ``BM25_EPSILON``.
+    """
+    # List comprehension over doc_ids: one token list per document (query-independent BM25 index input).
+    token_lists = [tokenize(doc_text(docs_by_id[doc_id])) for doc_id in doc_ids]
+    return BM25Okapi(token_lists, k1=BM25_K1, b=BM25_B, epsilon=BM25_EPSILON)
+
+
 def rank_corpus(bm25: BM25Okapi, query_tokens: list[str], doc_ids: list[str]) -> list[tuple[str, float]]:
     """Rank the whole corpus for one tokenized query; the single definition of the BM25 ranking and its tie rule.
 
@@ -73,10 +92,7 @@ def evaluate(name, paths):
     # Dict comprehension: doc ID -> doc record (lookup table; a repeated ID would keep the last record).
     docs_by_id = {str(d["doc_id"]): d for d in docs}
     doc_ids = list(docs_by_id)
-    # List comprehension over doc_ids: one token list per document (query-independent BM25 index input);
-    # row i of the index belongs to doc_ids[i].
-    bm25 = BM25Okapi([tokenize_de(doc_text(docs_by_id[i])) for i in doc_ids],
-                     k1=BM25_K1, b=BM25_B, epsilon=BM25_EPSILON)
+    bm25 = build_index(doc_ids, docs_by_id, tokenize_de)  # row i belongs to doc_ids[i]
     # gold: query_id -> set of relevant doc_ids (qrels filtered by threshold and corpus membership)
     gold = build_gold(qrels, set(doc_ids), RELEVANCE_THRESHOLD)
     # Set comprehension: IDs of all queries that appear in qrels at all (to flag queries without any judgment).
