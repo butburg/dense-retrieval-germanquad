@@ -4,27 +4,29 @@ Dieses Verzeichnis enthält die Sphinx-Quellen und den Build-Ablauf für die HTM
 
 ## Voraussetzungen
 
-Installiere Sphinx in der aktiven Python-Umgebung:
+Im Projekt ist Python 3.11.14 festgelegt. Die Einrichtung der gemeinsamen Entwicklungsumgebung steht in [../README.md](../README.md). Falls du nur die Doku bauen willst, genügt Sphinx in der aktivierten `.venv`:
 
 ```bash
-python -m pip install sphinx
+python -m pip install sphinx==8.2.3
 ```
 
-Optional können zusätzliche Sphinx-Erweiterungen über `docs/conf.py` aktiviert werden.
+Falls dabei `No module named pip` erscheint, zuerst `python -m ensurepip --upgrade` ausführen. Das passiert bei einer mit `uv venv` ohne `--seed` erstellten Umgebung.
+
+Für vollständige API-Einträge der importierten Module werden zusätzlich deren Abhängigkeiten benötigt. Sie stehen in `requirements.txt` und für die Embedding-Komponenten in `code/requirements-embed.txt`. Ein fehlender Import kann sonst eine Sphinx-Warnung verursachen.
 
 ## Dokumentation erstellen
 
 Führe den Build aus dem Repository-Hauptverzeichnis aus:
 
 ```bash
-sphinx-build -b html docs docs/_build/html
+python -m sphinx -b html docs docs/_build/html
 ```
 
 Der Befehl liest die Konfiguration aus `docs/conf.py` und legt die HTML-Dateien unter `docs/_build/html/` ab.
 
 ## Dokumentation aufrufen
 
-Im Abgabe-Repository liegt die fertig gerenderte Doku unter `docs/html/index.html` und lässt sich ohne eigenen Build öffnen; zum Neubauen dient der Befehl oben (zusätzlich `python -m pip install myst-parser` für die Markdown-Seite).
+Im Abgabe-Repository liegt zusätzlich die fertig gerenderte Doku unter `docs/html/index.html`. Für die hier eingebundenen `.rst`-Quellen ist `myst-parser` nicht erforderlich.
 
 Öffne die Startseite nach dem Build im Browser:
 
@@ -59,5 +61,5 @@ Die Erweiterung `sphinx.ext.napoleon` übersetzt Google-Style-Docstrings in Sphi
 Ergänze oder passe `.rst`-Dateien und die Sphinx-Konfiguration an, wenn neue Seiten, Erweiterungen oder Autodoc-Einbindungen hinzukommen.
 
 Führe danach den Sphinx-Build erneut aus, damit die HTML-Seiten aktualisiert werden.
-……
+
 `docs/_build/` enthält generierte Dateien und bleibt durch `docs/.gitignore` aus der Versionsverwaltung ausgeschlossen.

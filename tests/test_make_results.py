@@ -5,8 +5,7 @@ from pathlib import Path
 CODE = Path(__file__).resolve().parents[1] / "code"
 sys.path.insert(0, str(CODE)); sys.path.insert(0, str(CODE / "pylib"))
 from make_results import dep  # noqa: E402
-
-B = 100000
+from significance import B_PERM as B  # noqa: E402
 
 
 def test_floor_bounds_keep_family_factor():

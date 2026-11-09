@@ -8,18 +8,18 @@ from german_text import german_stopwords, preprocess_de, preprocessing_info  # n
 
 
 def test_lowercase_tokenize_and_umlauts():
-    assert preprocess_de("Käse, ÄPFEL & 42!", stopwords=False, stem=False) == ["käse", "äpfel", "42"]
+    assert preprocess_de("Käse, ÄPFEL & 42!", remove_stopwords=False, apply_stemming=False) == ["käse", "äpfel", "42"]
 
 
 def test_stopwords_removed_before_stemming():
     assert "die" in german_stopwords()
-    assert preprocess_de("Die Häuser der Stadt", stem=False) == ["häuser", "stadt"]
+    assert preprocess_de("Die Häuser der Stadt", apply_stemming=False) == ["häuser", "stadt"]
 
 
 def test_snowball_stemming_conflates_inflections():
-    assert preprocess_de("Häuser", stopwords=False) == preprocess_de("Haus", stopwords=False) == ["haus"]
-    assert preprocess_de("Katzen", stopwords=False) == preprocess_de("Katze", stopwords=False)
-    assert preprocess_de("Kindern", stopwords=False) == preprocess_de("Kinder", stopwords=False)
+    assert preprocess_de("Häuser", remove_stopwords=False) == preprocess_de("Haus", remove_stopwords=False) == ["haus"]
+    assert preprocess_de("Katzen", remove_stopwords=False) == preprocess_de("Katze", remove_stopwords=False)
+    assert preprocess_de("Kindern", remove_stopwords=False) == preprocess_de("Kinder", remove_stopwords=False)
 
 
 def test_none_and_empty():

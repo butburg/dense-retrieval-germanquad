@@ -17,6 +17,7 @@ E5_CSV = CODE / "output" / "harness" / "e5-large" / "per_query_germanquad.csv"
 CACHE = CODE / "output" / "harness" / "cache"
 N = 25
 pytest.importorskip("rank_bm25")
+from retrieval_metrics import best_gold_rank  # noqa: E402  (single definition of the best gold rank)
 pytestmark = pytest.mark.skipif(not (DS / "docs.normalized.jsonl").exists() or not BM25_CSV.exists(),
                                 reason="normalisierte Daten oder bm25_v2-CSV fehlen")
 
@@ -46,7 +47,7 @@ def test_bm25_gold_rank_and_top10_match_csv(data):
     assert len(qids) >= 20
     for qid in qids:
         rk = dq.bm25_ranking(bm25, tok, doc_ids, qtext[qid])
-        assert dq.gold_rank(rk, gold[qid]) == ref.loc[qid, "best_gold_rank_full"]
+        assert best_gold_rank(rk, gold[qid]) == ref.loc[qid, "best_gold_rank_full"]
         assert [d for d, _ in rk[:10]] == ref.loc[qid, "top_doc_ids"].split(" | ")
 
 
@@ -67,4 +68,4 @@ def test_e5_gold_rank_matches_csv(data):
         pytest.skip(f"Modell nicht ladbar: {type(ex).__name__}")
     for qid, qv in zip(qids, q_emb):
         rk = dq.dense_ranking(qv[None, :], d_emb, doc_ids)
-        assert dq.gold_rank(rk, gold[qid]) == ref.loc[qid, "rank_first_relevant"]
+        assert best_gold_rank(rk, gold[qid]) == ref.loc[qid, "rank_first_relevant"]

@@ -27,7 +27,7 @@ def test_monte_carlo_deterministic_and_floor():
     labels = [f"c{i}" for i in range(40)]
     cinv, ncl, _ = make_clusters(labels)
     d = np.ones(40)
-    r1, r2 = cluster_sign_flip(d, cinv, ncl, b=20_000), cluster_sign_flip(d, cinv, ncl, b=20_000)
+    r1, r2 = cluster_sign_flip(d, cinv, ncl, n_permutations=20_000), cluster_sign_flip(d, cinv, ncl, n_permutations=20_000)
     assert r1 == r2 and r1["method"] == "monte_carlo" and r1["mc_floor"] and abs(r1["p"] - 1 / 20_001) < 1e-12
 
 
