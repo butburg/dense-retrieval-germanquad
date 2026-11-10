@@ -563,6 +563,17 @@ model default.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="pylib.embedders.allow_offline_tokenizer_loading">
+<span class="sig-prename descclassname"><span class="pre">pylib.embedders.</span></span><span class="sig-name descname"><span class="pre">allow_offline_tokenizer_loading</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#pylib.embedders.allow_offline_tokenizer_loading" title="Link to this definition">¶</a></dt>
+<dd><p>Work around transformers 4.57.3, which queries the hub API in offline mode and then fails.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PreTrainedTokenizerBase._patch_mistral_regex</span></code> calls <code class="docutils literal notranslate"><span class="pre">huggingface_hub.model_info</span></code> to detect Mistral base
+models, even with <code class="docutils literal notranslate"><span class="pre">HF_HUB_OFFLINE=1</span></code>. The call raises <code class="docutils literal notranslate"><span class="pre">OfflineModeIsEnabled</span></code>, and sentence-transformers
+reports “Unrecognized processing class”. The replacement returns the tokenizer unchanged, which is also what the
+original does for every non-Mistral model (all models of the registry); tokenization and vectors stay the same.
+A transformers version without this method is left alone. Call only in offline mode.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="pylib.embedders.get_config">
 <span class="sig-prename descclassname"><span class="pre">pylib.embedders.</span></span><span class="sig-name descname"><span class="pre">get_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pylib.embedders.EmbedderConfig" title="pylib.embedders.EmbedderConfig"><span class="pre">EmbedderConfig</span></a></span></span><a class="headerlink" href="#pylib.embedders.get_config" title="Link to this definition">¶</a></dt>
 <dd><p>Look up the registered configuration of a model.</p>

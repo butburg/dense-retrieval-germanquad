@@ -18,9 +18,14 @@ CACHE = HARNESS / "cache"
 N = 25
 pytest.importorskip("rank_bm25")
 from retrieval_metrics import best_gold_rank  # noqa: E402  (single definition of the best gold rank)
-pytestmark = pytest.mark.skipif(not (DS / "docs.normalized.jsonl").exists() or not BM25_CSV.exists()
-                                or not BM25_DE_CSV.exists(),
-                                reason="normalisierte Daten oder BM25-CSVs fehlen")
+DATA_MISSING = not (DS / "docs.normalized.jsonl").exists() or not BM25_CSV.exists() or not BM25_DE_CSV.exists()
+
+
+@pytest.fixture(autouse=True)
+def _skip_without_data(request):
+    """Skip tests that need the normalized data and BM25 CSVs; the offline-decision tests (``test_offline_*``) do not."""
+    if DATA_MISSING and not request.node.name.startswith("test_offline_"):
+        pytest.skip("normalisierte Daten oder BM25-CSVs fehlen")
 
 
 def _sample_qids(ids: list[str]) -> list[str]:
@@ -182,3 +187,103 @@ def test_unknown_target_id_is_rejected_with_clear_message():
                              "--target-id", "c_gibt_es_nicht"], capture_output=True, text=True, timeout=300)
     assert result.returncode == 1
     assert "Ziel-ID 'c_gibt_es_nicht' nicht in" in result.stderr
+
+
+# --- Offline decision (cache check without network) ---
+@pytest.fixture
+def no_network(monkeypatch):
+    """Any socket connection fails the test: the decision must come from the cache folders alone."""
+    import socket
+
+    def refuse(self, address):
+        raise AssertionError(f"unexpected network access to {address}")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+
+
+def _fake_snapshot(hub_cache: Path, repo_id: str, revision: str, files: tuple[str, ...]) -> Path:
+    """Create ``models--<org>--<name>/snapshots/<revision>`` with empty files (as the hub cache lays them out)."""
+    snapshot = hub_cache / ("models--" + repo_id.replace("/", "--")) / "snapshots" / revision
+    snapshot.mkdir(parents=True)
+    for name in files:
+        (snapshot / name).write_text("x", encoding="utf-8")
+    return snapshot
+
+
+def test_offline_complete_cache_switches_both_variables_on(tmp_path, no_network):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("bge-m3")
+    _fake_snapshot(tmp_path, cfg.model_name, cfg.revision, ("config.json", "model.safetensors", "tokenizer.json"))
+    environ: dict[str, str] = {}
+    assert dq.choose_offline_mode(cfg, environ, tmp_path) is True
+    assert environ == {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}
+
+
+def test_offline_pytorch_bin_counts_as_weights(tmp_path):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("bge-m3")
+    _fake_snapshot(tmp_path, cfg.model_name, cfg.revision, ("config.json", "pytorch_model.bin"))
+    assert dq.is_model_cached(cfg, tmp_path)
+
+
+def test_offline_missing_or_incomplete_cache_stays_online_with_note(tmp_path, capsys, no_network):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("bge-m3")
+    environ: dict[str, str] = {}
+    assert dq.choose_offline_mode(cfg, environ, tmp_path) is False  # empty cache
+    # Tokenizer-only snapshot (no config, no weights) and a config without weights are not usable offline.
+    _fake_snapshot(tmp_path, cfg.model_name, cfg.revision, ("tokenizer.json", "config.json"))
+    assert dq.choose_offline_mode(cfg, environ, tmp_path) is False
+    assert environ == {}
+    assert capsys.readouterr().err.count("Hinweis: BAAI/bge-m3") == 2
+
+
+def test_offline_other_revision_does_not_count(tmp_path):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("bge-m3")
+    _fake_snapshot(tmp_path, cfg.model_name, "0" * 40, ("config.json", "model.safetensors"))
+    assert not dq.is_model_cached(cfg, tmp_path)
+
+
+def test_offline_dangling_symlink_is_not_a_cached_file(tmp_path):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("bge-m3")
+    snapshot = _fake_snapshot(tmp_path, cfg.model_name, cfg.revision, ("config.json",))
+    (snapshot / "model.safetensors").symlink_to(tmp_path / "blobs" / "missing")  # blob was never downloaded
+    assert not dq.is_model_cached(cfg, tmp_path)
+
+
+@pytest.mark.parametrize("explicit", ["0", "1"])
+def test_offline_explicit_environment_value_wins(tmp_path, explicit):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("bge-m3")
+    _fake_snapshot(tmp_path, cfg.model_name, cfg.revision, ("config.json", "model.safetensors"))
+    environ = {"HF_HUB_OFFLINE": explicit}
+    assert dq.choose_offline_mode(cfg, environ, tmp_path) is (explicit == "1")
+    assert environ == {"HF_HUB_OFFLINE": explicit}  # TRANSFORMERS_OFFLINE is not added next to an explicit choice
+
+
+def test_offline_remote_code_model_needs_code_repo_in_cache(tmp_path):
+    import demo_query as dq
+    from embedders import get_config
+    cfg = get_config("jina-v3")
+    _fake_snapshot(tmp_path, cfg.model_name, cfg.revision, ("config.json", "model.safetensors"))
+    assert not dq.is_model_cached(cfg, tmp_path)  # remote code repo missing
+    _fake_snapshot(tmp_path, cfg.code_repo, cfg.code_revision, ("README.md",))
+    assert not dq.is_model_cached(cfg, tmp_path)  # code repo present but without Python files
+    (tmp_path / ("models--" + cfg.code_repo.replace("/", "--")) / "snapshots" / cfg.code_revision / "modeling.py").write_text("x")
+    assert dq.is_model_cached(cfg, tmp_path)
+
+
+def test_offline_hub_cache_dir_follows_environment(tmp_path):
+    import demo_query as dq
+    assert dq.hub_cache_dir({"HF_HUB_CACHE": "/a", "HF_HOME": "/b"}) == Path("/a")
+    assert dq.hub_cache_dir({"HF_HOME": "/b"}) == Path("/b/hub")
+    assert dq.hub_cache_dir({"XDG_CACHE_HOME": "/c"}) == Path("/c/huggingface/hub")
+    assert dq.hub_cache_dir({}) == Path.home() / ".cache" / "huggingface" / "hub"

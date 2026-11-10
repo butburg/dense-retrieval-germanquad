@@ -22,10 +22,16 @@ a gold passage of the query, a result line carries both marks (``[GOLD]  [ZIEL]`
 scripts. Passage vectors are read from / written to the same cache as embed_eval.py (output/harness/cache/), so a run
 after ``embed_eval.py --stage encode`` needs no re-encoding. Only the single query is encoded at runtime. The imports of
 heavy modules are deferred into the functions so that ``--help`` and error messages work without them.
+
+Offline mode: if the pinned model revision is complete in the local Hugging Face cache (config, weights and, for
+remote-code models, the code repo), ``HF_HUB_OFFLINE=1`` and ``TRANSFORMERS_OFFLINE=1`` are set before transformers is
+imported, so no hub request delays the start. Without a cached model the online mode stays and a note appears on
+stderr. Variables set in the environment (also ``HF_HUB_OFFLINE=0``) take precedence. With transformers 4.57.3 the
+offline mode needs a small workaround in ``Embedder`` (``embedders.allow_offline_tokenizer_loading``).
 """
 from __future__ import annotations
 
-import argparse, shutil, sys, textwrap, time
+import argparse, os, shutil, sys, textwrap, time
 from pathlib import Path
 
 CODE = Path(__file__).resolve().parent
@@ -41,15 +47,118 @@ DEFAULT_K = 3  # results per column; three columns of k = 3 stay readable in a 1
 FALLBACK_WIDTH = 170  # total terminal width in characters when neither the terminal nor --width provides one
 SEPARATOR = " | "  # between columns
 SNIPPET_LINES = 3  # snippet lines per result
-# One source for the offline hint (README: "Hinweis" in the section on demo_query.py).
-OFFLINE_HINT = ("Gewichte einmalig mit Netzzugang laden; HF_HUB_OFFLINE=1 funktioniert mit sentence-transformers 5.7 "
-                "nicht (siehe code/README.md), das Netz muss auch bei der Vorführung erreichbar sein.")
+# Files of a usable cached model: config.json plus at least one weight file or weight index.
+MODEL_WEIGHT_FILES = ("model.safetensors", "pytorch_model.bin", "model.safetensors.index.json",
+                      "pytorch_model.bin.index.json")
+OFFLINE_VARIABLES = ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE")  # both are read by huggingface_hub / transformers
+TRUE_VALUES = ("1", "on", "yes", "true")  # values that huggingface_hub treats as "switched on"
+# One source for the hint after a failed model load (README: "Hinweis" in the section on demo_query.py).
+OFFLINE_HINT = ("Fehlt das Modell im lokalen Hugging-Face-Cache, einmal mit Netzzugang laden und "
+                "HF_HUB_OFFLINE=0 TRANSFORMERS_OFFLINE=0 setzen (siehe code/README.md).")
 
 
 def fail(msg: str) -> None:
     """Print a clear error message and exit with status 1."""
     print(f"Fehler: {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def hub_cache_dir(environ=os.environ) -> Path:
+    """Folder of the local Hugging Face hub cache, resolved like ``huggingface_hub`` does (without importing it).
+
+    Args:
+        environ: Environment mapping, e.g. ``os.environ``; ``HF_HUB_CACHE``, ``HUGGINGFACE_HUB_CACHE``, ``HF_HOME``
+            and ``XDG_CACHE_HOME`` are honoured in this order.
+
+    Returns:
+        Path of the cache folder that contains the ``models--<org>--<name>`` directories.
+    """
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE"):
+        if environ.get(name):
+            return Path(environ[name])
+    if environ.get("HF_HOME"):
+        return Path(environ["HF_HOME"]) / "hub"
+    if environ.get("XDG_CACHE_HOME"):
+        return Path(environ["XDG_CACHE_HOME"]) / "huggingface" / "hub"
+    return Path.home() / ".cache" / "huggingface" / "hub"
+
+
+def cached_snapshot(repo_id: str, revision: str | None, hub_cache: Path) -> Path | None:
+    """Snapshot folder of a model repo in the local cache, or ``None``.
+
+    Args:
+        repo_id: Hub repo ID, e.g. ``"BAAI/bge-m3"``.
+        revision: Commit hash of the snapshot; ``None`` follows the cached ``refs/main``.
+        hub_cache: Cache folder from :func:`hub_cache_dir`.
+
+    Returns:
+        ``<hub_cache>/models--BAAI--bge-m3/snapshots/<revision>`` if it exists, else ``None``. No network access.
+    """
+    repo_dir = hub_cache / ("models--" + repo_id.replace("/", "--"))
+    if revision is None:
+        ref_file = repo_dir / "refs" / "main"
+        if not ref_file.is_file():
+            return None
+        revision = ref_file.read_text(encoding="utf-8").strip()
+    snapshot = repo_dir / "snapshots" / revision
+    return snapshot if snapshot.is_dir() else None
+
+
+def is_model_cached(cfg, hub_cache: Path) -> bool:
+    """True if the pinned model can be loaded from the local cache without network.
+
+    The check reads the cache folders only. A snapshot counts as complete if it holds ``config.json`` and a weight
+    file (a tokenizer-only snapshot does not count). For models with remote code (``trust_remote_code``), the pinned
+    revision of the code repo (``cfg.code_repo`` at ``cfg.code_revision``) must hold at least one ``.py`` file as well.
+
+    Args:
+        cfg: ``EmbedderConfig`` of the model (``model_name``, ``revision``, ``code_repo``, ``code_revision``).
+        hub_cache: Cache folder from :func:`hub_cache_dir`.
+
+    Returns:
+        ``True`` if all required files are present (symlinks must resolve to existing blobs).
+    """
+    snapshot = cached_snapshot(cfg.model_name, cfg.revision, hub_cache)
+    if snapshot is None or not (snapshot / "config.json").is_file():
+        return False
+    if not any((snapshot / name).is_file() for name in MODEL_WEIGHT_FILES):
+        return False
+    if cfg.trust_remote_code and cfg.code_repo:
+        code_snapshot = cached_snapshot(cfg.code_repo, cfg.code_revision, hub_cache)
+        if code_snapshot is None or not any(code_snapshot.glob("*.py")):
+            return False
+    return True
+
+
+def is_offline(environ=os.environ) -> bool:
+    """True if ``HF_HUB_OFFLINE`` or ``TRANSFORMERS_OFFLINE`` is switched on in ``environ``."""
+    return any(environ.get(name, "").lower() in TRUE_VALUES for name in OFFLINE_VARIABLES)
+
+
+def choose_offline_mode(cfg, environ=os.environ, hub_cache: Path | None = None) -> bool:
+    """Switch Hugging Face to offline mode when the model is fully cached; call before importing transformers.
+
+    ``huggingface_hub`` and ``transformers`` read the variables once at import, so this must run first. An explicit
+    value of ``HF_HUB_OFFLINE`` or ``TRANSFORMERS_OFFLINE`` in ``environ`` (also ``0``) is kept and nothing is set.
+    If the model is not cached, the online mode stays and a short note goes to stderr.
+
+    Args:
+        cfg: ``EmbedderConfig`` of the chosen model.
+        environ: Mapping that receives ``HF_HUB_OFFLINE=1`` and ``TRANSFORMERS_OFFLINE=1`` (``os.environ`` in use).
+        hub_cache: Cache folder; ``None`` resolves it from ``environ``.
+
+    Returns:
+        ``True`` if the process runs offline afterwards (set here or by the caller), else ``False``.
+    """
+    if any(name in environ for name in OFFLINE_VARIABLES):
+        return is_offline(environ)
+    if is_model_cached(cfg, hub_cache or hub_cache_dir(environ)):
+        for name in OFFLINE_VARIABLES:
+            environ.setdefault(name, "1")
+        return True
+    print(f"Hinweis: {cfg.model_name} liegt nicht vollständig im lokalen Hugging-Face-Cache und wird einmalig "
+          f"mit Netzzugang geladen.", file=sys.stderr)
+    return False
 
 
 def load_dataset(dataset_dir: Path):
@@ -294,7 +403,10 @@ def main() -> None:
     from embed_eval import cached_encode, doc_text
     from embedders import Embedder, get_config
     from retrieval_metrics import build_gold
-    emb = Embedder(get_config(a.model))  # emb: encoder with the registry config (prefixes, revision, normalization)
+    cfg = get_config(a.model)
+    # Offline decision before the first import of transformers / huggingface_hub (they read the variables at import).
+    choose_offline_mode(cfg)
+    emb = Embedder(cfg)  # emb: encoder with the registry config (prefixes, revision, normalization)
     cache = CODE / "output" / "harness" / "cache"
     t0 = time.time()
     try:

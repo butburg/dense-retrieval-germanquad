@@ -50,3 +50,22 @@ def test_prompt_name_changes_cache_key():
     q = get_config("qwen3-embedding-0.6b")
     assert "query" in cache_key_parts(q, True)
     assert "query" not in cache_key_parts(get_config("bge-m3"), True)
+
+
+def test_offline_tokenizer_workaround_skips_hub_lookup(monkeypatch):
+    """After the workaround, the Mistral-regex check returns the tokenizer without any hub request."""
+    transformers_base = pytest.importorskip("transformers.tokenization_utils_base")
+    from embedders import allow_offline_tokenizer_loading
+    base = transformers_base.PreTrainedTokenizerBase
+    if not hasattr(base, "_patch_mistral_regex"):
+        pytest.skip("this transformers version has no _patch_mistral_regex")
+    monkeypatch.setattr(base, "_patch_mistral_regex", base._patch_mistral_regex)  # restores the original afterwards
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("unexpected hub request")
+
+    import huggingface_hub
+    monkeypatch.setattr(huggingface_hub, "model_info", refuse)
+    allow_offline_tokenizer_loading()
+    sentinel = object()
+    assert base._patch_mistral_regex(sentinel, "BAAI/bge-m3") is sentinel

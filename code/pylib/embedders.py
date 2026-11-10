@@ -130,6 +130,20 @@ def _l2(embeddings: np.ndarray) -> np.ndarray:
     return embeddings / np.clip(row_norms, 1e-12, None)
 
 
+def allow_offline_tokenizer_loading() -> None:
+    """Work around transformers 4.57.3, which queries the hub API in offline mode and then fails.
+
+    ``PreTrainedTokenizerBase._patch_mistral_regex`` calls ``huggingface_hub.model_info`` to detect Mistral base
+    models, even with ``HF_HUB_OFFLINE=1``. The call raises ``OfflineModeIsEnabled``, and sentence-transformers
+    reports "Unrecognized processing class". The replacement returns the tokenizer unchanged, which is also what the
+    original does for every non-Mistral model (all models of the registry); tokenization and vectors stay the same.
+    A transformers version without this method is left alone. Call only in offline mode.
+    """
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+    if hasattr(PreTrainedTokenizerBase, "_patch_mistral_regex"):
+        PreTrainedTokenizerBase._patch_mistral_regex = classmethod(lambda cls, tokenizer, *args, **kwargs: tokenizer)
+
+
 class Embedder:
     """Encodes texts with one configured model; prefixes and normalisation are applied here.
 
@@ -262,6 +276,9 @@ class Embedder:
         ``query_prompt_name`` if configured; documents use ``doc_task``.
         """
         if self._model is None:
+            from huggingface_hub import constants as hub_constants
+            if hub_constants.HF_HUB_OFFLINE:  # set before the first import of huggingface_hub (e.g. by demo_query.py)
+                allow_offline_tokenizer_loading()
             from sentence_transformers import SentenceTransformer
             self._model = SentenceTransformer(
                 self.cfg.model_name, device="cpu", revision=self.cfg.revision,

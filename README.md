@@ -21,8 +21,8 @@ Vorausgesetzt wird Python 3.11 (getestet mit 3.11.x).
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu   # CPU-Wheel
-pip install -r code/requirements-embed.txt                                  # Stack des Hauptexperiments
-pip install -r requirements.txt                                             # Notebook- und Sphinx-Umgebung
+pip install -r code/requirements-embed.txt                                   # Stack des Hauptexperiments
+pip install -r requirements.txt                                              # Notebook- und Sphinx-Umgebung
 ```
 
 Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face-Hub (gepinnte Revisionen, gespeichert in `code/output/harness/<Modell>/metrics_germanquad.json`). Die OpenAI-Modelle benötigen den Schlüssel in der Umgebungsvariable `EMBED_OPENAI_API_KEY`.
@@ -45,7 +45,7 @@ Die Notebooks 01 bis 04 dokumentieren den Datensatz-PoC (Download, Parsing, BM25
 
 ## Demo
 
-`code/demo_query.py` zeigt für eine freie Frage (`--query`) oder eine Frage aus dem Datensatz (`--query-id`) die Top-k-Passagen von BM25, BM25-de und bge-m3 in drei Spalten nebeneinander (CPU, kein API-Schlüssel). Bei `--query-id` ist die Gold-Passage markiert, darunter steht ihr Rang je Verfahren in der vollen Rangliste. Die Modellgewichte lädt sentence-transformers vom Hugging-Face-Hub (`HF_HUB_OFFLINE=1` funktioniert mit sentence-transformers 5.7 nicht, die Vorführung braucht Netzzugang).
+`code/demo_query.py` zeigt für eine freie Frage (`--query`) oder eine Frage aus dem Datensatz (`--query-id`) die Top-k-Passagen von BM25, BM25-de und bge-m3 in drei Spalten nebeneinander (CPU, kein API-Schlüssel). Bei `--query-id` ist die Gold-Passage markiert, darunter steht ihr Rang je Verfahren in der vollen Rangliste. Die Modellgewichte lädt sentence-transformers beim ersten Lauf vom Hugging-Face-Hub; liegen sie im lokalen Cache, schaltet `demo_query.py` selbst auf den Offline-Modus (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`), und ein gesetzter Wert der Umgebung hat Vorrang.
 
 ```bash
 cd code
@@ -73,7 +73,7 @@ Die maßgeblichen Zahlen stehen in `code/output/harness/results/table_main.md` (
 sphinx-build -b html docs docs/_build/html
 ```
 
-Der Build liest die Docstrings aus `code/pylib/` und schreibt die API-Dokumentation nach `docs/_build/html/`. Die fertig gerenderte Fassung liegt unter `docs/html/index.html` und lässt sich ohne eigenen Build öffnen, online unter https://butburg.github.io/dense-retrieval-germanquad/ (GitHub Pages aus `main`, Ordner `/docs`); zum Neubauen dient der Befehl oben (Voraussetzung: `pip install sphinx myst-parser`).
+Der Build liest die Docstrings aus `code/pylib/` und schreibt die API-Dokumentation nach `docs/_build/html/`. Die fertig gerenderte Fassung liegt unter `docs/html/index.html` und lässt sich ohne eigenen Build öffnen, online unter https://butburg.github.io/dense-retrieval-germanquad/ (GitHub Pages aus `main`, Ordner `/docs`); zum Neubauen dient der Befehl oben (Voraussetzung: die Umgebung aus dem Abschnitt Setup, `requirements.txt` enthält Sphinx und myst-parser).
 
 ## Repository aktualisieren
 
