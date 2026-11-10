@@ -1,13 +1,15 @@
 {
   "dataset": "germanquad",
   "n_passages": 474,
-  "counted": "add_special_tokens=True, doc prefix prepended, no truncation",
+  "counted": "local models: add_special_tokens=True, doc prefix prepended, no truncation; OpenAI models (tiktoken cl100k_base): no special tokens (the API adds none), no doc prefix, no truncation",
   "threshold": 512,
   "models": {
     "e5-large": {
       "model_name": "intfloat/multilingual-e5-large",
       "revision": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
       "n_over_512": 144,
+      "effective_limit": 512,
+      "n_over_limit": 144,
       "median": 350.5,
       "max": 2654,
       "min": 117
@@ -16,6 +18,8 @@
       "model_name": "BAAI/bge-m3",
       "revision": "5617a9f61b028005a4858fdac845db406aefb181",
       "n_over_512": 143,
+      "effective_limit": 8192,
+      "n_over_limit": 0,
       "median": 348.5,
       "max": 2652,
       "min": 115
@@ -24,6 +28,8 @@
       "model_name": "Alibaba-NLP/gte-multilingual-base",
       "revision": "9bbca17d9273fd0d03d5725c7a4b0f6b45142062",
       "n_over_512": 143,
+      "effective_limit": 8192,
+      "n_over_limit": 0,
       "median": 348.5,
       "max": 2652,
       "min": 115
@@ -32,9 +38,63 @@
       "model_name": "jinaai/jina-embeddings-v3",
       "revision": "ab036b023d30b4d1138c4c3bfa9f0c445ab455d6",
       "n_over_512": 143,
+      "effective_limit": 8194,
+      "n_over_limit": 0,
       "median": 348.5,
       "max": 2652,
       "min": 115
+    },
+    "qwen3-embedding-0.6b": {
+      "model_name": "Qwen/Qwen3-Embedding-0.6B",
+      "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "n_over_512": 195,
+      "effective_limit": 8192,
+      "n_over_limit": 0,
+      "median": 417.0,
+      "max": 3126,
+      "min": 130
+    },
+    "arctic-embed-l-v2": {
+      "model_name": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "revision": "ac6544c8a46e00af67e330e85a9028c66b8cfd9a",
+      "n_over_512": 143,
+      "effective_limit": 8192,
+      "n_over_limit": 0,
+      "median": 348.5,
+      "max": 2652,
+      "min": 115
+    },
+    "jina-v2-base-de": {
+      "model_name": "jinaai/jina-embeddings-v2-base-de",
+      "revision": "3f9eede875721714945b6a99a3198299243cf2be",
+      "n_over_512": 125,
+      "effective_limit": 8192,
+      "n_over_limit": 0,
+      "median": 313.0,
+      "max": 2240,
+      "min": 97
+    },
+    "openai-3-small": {
+      "model_name": "text-embedding-3-small",
+      "revision": null,
+      "tokenizer": "tiktoken 0.14.0, cl100k_base",
+      "n_over_512": 190,
+      "effective_limit": null,
+      "n_over_limit": null,
+      "median": 410.0,
+      "max": 3142,
+      "min": 128
+    },
+    "openai-3-large": {
+      "model_name": "text-embedding-3-large",
+      "revision": null,
+      "tokenizer": "tiktoken 0.14.0, cl100k_base",
+      "n_over_512": 190,
+      "effective_limit": null,
+      "n_over_limit": null,
+      "median": 410.0,
+      "max": 3142,
+      "min": 128
     }
   },
   "transformers": "4.57.3"
